@@ -98,7 +98,7 @@ This powers the photo scanner and the sommelier recommendations.
 
    | Name | Value |
    |---|---|
-   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase **Project URL** (from the **Data API** page, e.g. `https://xxxx.supabase.co`) |
+   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase **Project URL** — the bare host `https://xxxx.supabase.co` ⚠️ **NOT** the RESTful endpoint that ends in `/rest/v1/` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase **Publishable key** (`sb_publishable_…`) |
    | `SUPABASE_SERVICE_ROLE_KEY` | Supabase **Secret key** (`sb_secret_…`) |
    | `RESEND_API_KEY` | your Resend key (`re_…`) |
@@ -106,6 +106,11 @@ This powers the photo scanner and the sommelier recommendations.
    | `RESTOCK_EMAIL_FROM` | `Tantaan Tiki Bar <onboarding@resend.dev>` |
    | `CRON_SECRET` | any long random text, e.g. `cellar-7Kp2mQ9xLr4` |
    | `ANTHROPIC_API_KEY` | your Claude key (`sk-ant-…`) |
+
+   > ⚠️ **Most common mistake:** `NEXT_PUBLIC_SUPABASE_URL` must be the bare host
+   > (`https://xxxx.supabase.co`) with nothing after `.co`. If it ends in `/rest/v1/`
+   > (the "RESTful endpoint" shown on the Data API page), login fails with a 404 /
+   > "Invalid path" error. Fix it and **redeploy** (this value is baked in at build time).
 
 4. Click **Deploy**. Wait ~2 minutes.
 
