@@ -13,7 +13,15 @@ type Draft = { name: string; brand: string; category: string; level: number };
 
 const EMPTY_DRAFT: Draft = { name: "", brand: "", category: "Other", level: 5 };
 
-export function CellarView({ initial, aiEnabled }: { initial: Bottle[]; aiEnabled: boolean }) {
+export function CellarView({
+  initial,
+  aiEnabled,
+  isAdmin,
+}: {
+  initial: Bottle[];
+  aiEnabled: boolean;
+  isAdmin: boolean;
+}) {
   const supabase = createClient();
   const [bottles, setBottles] = useState<Bottle[]>(initial);
   const [query, setQuery] = useState("");
@@ -133,31 +141,33 @@ export function CellarView({ initial, aiEnabled }: { initial: Bottle[]; aiEnable
         </div>
       </div>
 
-      {/* Controls */}
-      <div className={`mb-4 grid gap-2 ${aiEnabled ? "grid-cols-3" : "grid-cols-2"}`}>
-        {aiEnabled && (
+      {/* Controls — admin only */}
+      {isAdmin && (
+        <div className={`mb-4 grid gap-2 ${aiEnabled ? "grid-cols-3" : "grid-cols-2"}`}>
+          {aiEnabled && (
+            <button
+              className={mode === "scan" ? "club-btn" : "club-btn-ghost"}
+              onClick={() => setMode(mode === "scan" ? "none" : "scan")}
+            >
+              📷 Scan
+            </button>
+          )}
           <button
-            className={mode === "scan" ? "club-btn" : "club-btn-ghost"}
-            onClick={() => setMode(mode === "scan" ? "none" : "scan")}
+            className={mode === "single" ? "club-btn" : "club-btn-ghost"}
+            onClick={() => setMode(mode === "single" ? "none" : "single")}
           >
-            📷 Scan
+            + Add
           </button>
-        )}
-        <button
-          className={mode === "single" ? "club-btn" : "club-btn-ghost"}
-          onClick={() => setMode(mode === "single" ? "none" : "single")}
-        >
-          + Add
-        </button>
-        <button
-          className={mode === "bulk" ? "club-btn" : "club-btn-ghost"}
-          onClick={() => setMode(mode === "bulk" ? "none" : "bulk")}
-        >
-          Bulk
-        </button>
-      </div>
+          <button
+            className={mode === "bulk" ? "club-btn" : "club-btn-ghost"}
+            onClick={() => setMode(mode === "bulk" ? "none" : "bulk")}
+          >
+            Bulk
+          </button>
+        </div>
+      )}
 
-      {aiEnabled && mode === "scan" && (
+      {isAdmin && aiEnabled && mode === "scan" && (
         <PhotoScan onAdd={addMany} onDone={() => setMode("none")} />
       )}
 
@@ -272,13 +282,19 @@ export function CellarView({ initial, aiEnabled }: { initial: Bottle[]; aiEnable
                           {b.brand ? ` · ${b.brand}` : ""}
                         </div>
                       </div>
-                      <LevelPicker level={b.level} onChange={(lv) => setLevel(b.id, lv)} />
-                      <button
-                        onClick={() => setEditing(b.id)}
-                        className="font-body text-xs text-ink-soft underline decoration-brass/50 hover:text-racing"
-                      >
-                        edit
-                      </button>
+                      <LevelPicker
+                        level={b.level}
+                        onChange={(lv) => setLevel(b.id, lv)}
+                        readOnly={!isAdmin}
+                      />
+                      {isAdmin && (
+                        <button
+                          onClick={() => setEditing(b.id)}
+                          className="font-body text-xs text-ink-soft underline decoration-brass/50 hover:text-racing"
+                        >
+                          edit
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

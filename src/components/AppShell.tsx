@@ -5,16 +5,23 @@ import { usePathname, useRouter } from "next/navigation";
 import { Crest } from "./Crest";
 import { createClient } from "@/lib/supabase/client";
 
-const TABS = [
-  { href: "/cellar", label: "Cellar" },
-  { href: "/restock", label: "Restock" },
-  { href: "/recommendations", label: "Recommend" },
-  { href: "/party", label: "Party" },
+const ALL_TABS = [
+  { href: "/cellar", label: "Cellar", adminOnly: false },
+  { href: "/restock", label: "Restock", adminOnly: false },
+  { href: "/recommendations", label: "Recommend", adminOnly: false },
+  { href: "/party", label: "Party", adminOnly: true },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  isAdmin = false,
+}: {
+  children: React.ReactNode;
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
+  const tabs = ALL_TABS.filter((t) => isAdmin || !t.adminOnly);
 
   async function signOut() {
     const supabase = createClient();
@@ -47,8 +54,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Bottom nav — thumb-friendly on mobile */}
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-brass/30 bg-racing-deep/95 backdrop-blur">
-        <div className="mx-auto grid max-w-3xl grid-cols-4">
-          {TABS.map((t) => {
+        <div
+          className="mx-auto grid max-w-3xl"
+          style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+        >
+          {tabs.map((t) => {
             const active = pathname.startsWith(t.href);
             return (
               <Link

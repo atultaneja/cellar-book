@@ -58,38 +58,60 @@ create trigger trg_bottles_touch before update on public.bottles
 -- ============================================================
 --  ROW LEVEL SECURITY — each account sees only its own data
 -- ============================================================
+-- Auto-fill the owner on insert (previously omitted — bottle inserts failed).
+alter table public.bottles alter column user_id set default auth.uid();
+alter table public.parties alter column user_id set default auth.uid();
+
+-- ┌────────────────────────────────────────────────────────────┐
+-- │  SET YOUR ADMIN EMAIL HERE — the read/write (owner) login.   │
+-- │  Any other confirmed login is a read-only viewer.            │
+-- └────────────────────────────────────────────────────────────┘
+create or replace function public.is_admin()
+returns boolean language sql stable as $$
+  select coalesce(lower(auth.jwt() ->> 'email'), '') = lower('atultaneja316@gmail.com')
+$$;
+
 alter table public.bottles         enable row level security;
 alter table public.parties         enable row level security;
 alter table public.party_bottles   enable row level security;
 alter table public.party_cocktails enable row level security;
 
+-- Pattern for every bar table: any signed-in user may READ; only admin may WRITE.
 -- bottles
 drop policy if exists "own bottles" on public.bottles;
-create policy "own bottles" on public.bottles
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "read bottles" on public.bottles;
+drop policy if exists "admin writes bottles" on public.bottles;
+create policy "read bottles" on public.bottles
+  for select using (auth.uid() is not null);
+create policy "admin writes bottles" on public.bottles
+  for all using (public.is_admin()) with check (public.is_admin());
 
 -- parties
 drop policy if exists "own parties" on public.parties;
-create policy "own parties" on public.parties
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "read parties" on public.parties;
+drop policy if exists "admin writes parties" on public.parties;
+create policy "read parties" on public.parties
+  for select using (auth.uid() is not null);
+create policy "admin writes parties" on public.parties
+  for all using (public.is_admin()) with check (public.is_admin());
 
--- party_bottles (owned via parent party)
+-- party_bottles
 drop policy if exists "own party_bottles" on public.party_bottles;
-create policy "own party_bottles" on public.party_bottles
-  for all using (
-    exists (select 1 from public.parties p where p.id = party_id and p.user_id = auth.uid())
-  ) with check (
-    exists (select 1 from public.parties p where p.id = party_id and p.user_id = auth.uid())
-  );
+drop policy if exists "read party_bottles" on public.party_bottles;
+drop policy if exists "admin writes party_bottles" on public.party_bottles;
+create policy "read party_bottles" on public.party_bottles
+  for select using (auth.uid() is not null);
+create policy "admin writes party_bottles" on public.party_bottles
+  for all using (public.is_admin()) with check (public.is_admin());
 
--- party_cocktails (owned via parent party)
+-- party_cocktails
 drop policy if exists "own party_cocktails" on public.party_cocktails;
-create policy "own party_cocktails" on public.party_cocktails
-  for all using (
-    exists (select 1 from public.parties p where p.id = party_id and p.user_id = auth.uid())
-  ) with check (
-    exists (select 1 from public.parties p where p.id = party_id and p.user_id = auth.uid())
-  );
+drop policy if exists "read party_cocktails" on public.party_cocktails;
+drop policy if exists "admin writes party_cocktails" on public.party_cocktails;
+create policy "read party_cocktails" on public.party_cocktails
+  for select using (auth.uid() is not null);
+create policy "admin writes party_cocktails" on public.party_cocktails
+  for all using (public.is_admin()) with check (public.is_admin());
 
 -- ============================================================
 --  PUBLIC PARTY VIEW
@@ -135,10 +157,17 @@ create table if not exists public.taste_profiles (
   updated_at  timestamptz not null default now()
 );
 
+-- One shared bar profile: any signed-in user may READ it (so the viewer's
+-- recommendations are tuned to it); only the admin may edit it.
+alter table public.taste_profiles alter column user_id set default auth.uid();
 alter table public.taste_profiles enable row level security;
 drop policy if exists "own taste profile" on public.taste_profiles;
-create policy "own taste profile" on public.taste_profiles
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "read taste profile" on public.taste_profiles;
+drop policy if exists "admin writes taste profile" on public.taste_profiles;
+create policy "read taste profile" on public.taste_profiles
+  for select using (auth.uid() is not null);
+create policy "admin writes taste profile" on public.taste_profiles
+  for all using (public.is_admin()) with check (public.is_admin());
 
 -- ============================================================
 --  AI RECOMMENDATION LOG — remembers what was suggested & when

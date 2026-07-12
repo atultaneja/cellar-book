@@ -69,7 +69,8 @@ export async function POST(request: Request) {
 
   const [{ data: bottleRows }, { data: profileRow }] = await Promise.all([
     supabase.from("bottles").select("*"),
-    supabase.from("taste_profiles").select("data").eq("user_id", user.id).maybeSingle(),
+    // Shared bar profile (one row); readable by admin and viewers alike.
+    supabase.from("taste_profiles").select("data").limit(1).maybeSingle(),
   ]);
 
   const bottles = (bottleRows as Bottle[]) ?? [];

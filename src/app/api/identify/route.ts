@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { anthropic, MODEL, parseJsonResponse } from "@/lib/ai";
 import { CATEGORIES } from "@/lib/categories";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminEmail } from "@/lib/isAdmin";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -56,6 +57,8 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isAdminEmail(user.email))
+    return NextResponse.json({ error: "Only the owner can add bottles." }, { status: 403 });
   if (!process.env.ANTHROPIC_API_KEY)
     return NextResponse.json({ error: "Photo scanning is turned off." }, { status: 503 });
 

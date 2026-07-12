@@ -22,10 +22,12 @@ export function RecommendationsView({
   bottles,
   initialProfile,
   aiEnabled,
+  isAdmin,
 }: {
   bottles: Bottle[];
   initialProfile: TasteProfile;
   aiEnabled: boolean;
+  isAdmin: boolean;
 }) {
   const [mood, setMood] = useState<Mood | "All">("All");
   const [profile, setProfile] = useState<TasteProfile>(initialProfile);
@@ -72,33 +74,34 @@ export function RecommendationsView({
       {/* AI section — only when a Claude key is configured */}
       {aiEnabled && (
         <>
-          {/* Taste profile (memory) */}
-          {editingProfile ? (
-            <TasteProfileEditor
-              initial={profile}
-              onSaved={(p) => {
-                setProfile(p);
-                setEditingProfile(false);
-              }}
-              onClose={() => setEditingProfile(false)}
-            />
-          ) : (
-            <div className="club-card mb-5 flex items-center justify-between gap-3 p-3">
-              <p className="font-body text-sm text-ink-soft">
-                {profileIsEmpty(profile)
-                  ? "Set your taste profile so the sommelier knows your palate."
-                  : "The sommelier remembers your palate."}
-              </p>
-              <button
-                className="club-btn-ghost !py-1.5 text-xs"
-                onClick={() => setEditingProfile(true)}
-              >
-                {profileIsEmpty(profile) ? "Set profile" : "Edit"}
-              </button>
-            </div>
-          )}
+          {/* Taste profile (memory) — only the admin can edit it */}
+          {isAdmin &&
+            (editingProfile ? (
+              <TasteProfileEditor
+                initial={profile}
+                onSaved={(p) => {
+                  setProfile(p);
+                  setEditingProfile(false);
+                }}
+                onClose={() => setEditingProfile(false)}
+              />
+            ) : (
+              <div className="club-card mb-5 flex items-center justify-between gap-3 p-3">
+                <p className="font-body text-sm text-ink-soft">
+                  {profileIsEmpty(profile)
+                    ? "Set your taste profile so the sommelier knows your palate."
+                    : "The sommelier remembers your palate."}
+                </p>
+                <button
+                  className="club-btn-ghost !py-1.5 text-xs"
+                  onClick={() => setEditingProfile(true)}
+                >
+                  {profileIsEmpty(profile) ? "Set profile" : "Edit"}
+                </button>
+              </div>
+            ))}
 
-          {/* Interactive AI sommelier */}
+          {/* Interactive AI sommelier — available to everyone */}
           <Sommelier />
 
           {/* Divider before the rule-based picks */}

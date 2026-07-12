@@ -106,6 +106,7 @@ This powers the photo scanner and the sommelier recommendations.
    | `RESTOCK_EMAIL_FROM` | `Tantaan Tiki Bar <onboarding@resend.dev>` |
    | `CRON_SECRET` | any long random text, e.g. `cellar-7Kp2mQ9xLr4` |
    | `ANTHROPIC_API_KEY` | your Claude key (`sk-ant-…`) |
+   | `ADMIN_EMAIL` | your owner-login email — the full read/write account. Must match the email in the `is_admin()` function in `supabase-schema.sql`. |
 
    > ⚠️ **Most common mistake:** `NEXT_PUBLIC_SUPABASE_URL` must be the bare host
    > (`https://xxxx.supabase.co`) with nothing after `.co`. If it ends in `/rest/v1/`
@@ -117,12 +118,16 @@ This powers the photo scanner and the sommelier recommendations.
    **You should see:** a congratulations screen with a preview of your app.
 
 5. Copy your live address — it looks like `https://cellar-book-xxxx.vercel.app`.
-6. Tell Supabase to trust your live address for login: Supabase → **Authentication** →
-   **URL Configuration** → set **Site URL** to your Vercel address, and under
-   **Redirect URLs** add `https://YOUR-ADDRESS.vercel.app/auth/callback`. Save.
 
-**You should see:** open your Vercel address on your phone → the "Tantaan Tiki Bar"
-login screen. Enter your email, tap the link it sends, and you're in.
+### Create your two logins (Supabase → Authentication → Users → Add user)
+
+Login is **email + password** — no email is ever sent, so tick **Auto Confirm User** on each.
+
+1. **Owner (you):** email = your `ADMIN_EMAIL` (and the email in `is_admin()`), plus a password. This account can add/edit/scan/restock/host.
+2. **Shared guest:** any email you like (it need not be real, e.g. `guests@tantaan.bar`) + a password you'll hand out. This account is **read-only** — browse inventory and use the sommelier, but change nothing.
+
+**You should see:** open your Vercel address → the "Tantaan Tiki Bar" screen → sign in with the
+owner email + password → you're in. (No magic links, no confirmation emails.)
 
 ---
 

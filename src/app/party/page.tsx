@@ -1,12 +1,20 @@
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { PartyView } from "@/components/PartyView";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminEmail } from "@/lib/isAdmin";
 import type { Bottle, Party } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function PartyPage() {
   const supabase = createClient();
+
+  // Hosting is admin-only; viewers are bounced to the cellar.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!isAdminEmail(user?.email)) redirect("/cellar");
 
   const [{ data: parties }, { data: bottles }] = await Promise.all([
     supabase.from("parties").select("*").order("created_at", { ascending: false }).limit(1),
@@ -27,7 +35,7 @@ export default async function PartyPage() {
   }
 
   return (
-    <AppShell>
+    <AppShell isAdmin>
       <PartyView
         initialParty={party}
         bottles={(bottles as Bottle[]) ?? []}

@@ -12,12 +12,31 @@ function barColor(level: number) {
 export function LevelPicker({
   level,
   onChange,
+  readOnly = false,
 }: {
   level: number;
   onChange: (next: number) => void;
+  readOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const meta = levelMeta(level);
+
+  // Read-only viewers see the level bar but can't change it.
+  if (readOnly) {
+    return (
+      <div className="flex w-24 items-center gap-2" title={meta.label}>
+        <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-brass/20">
+          <span
+            className={`absolute inset-y-0 left-0 rounded-full ${barColor(level)}`}
+            style={{ width: `${meta.pct}%` }}
+          />
+        </span>
+        <span className="w-6 text-right font-body text-sm font-semibold text-ink">
+          {meta.fraction}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">

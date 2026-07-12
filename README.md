@@ -12,7 +12,7 @@ club-house aesthetic. Mobile-first, cloud-synced, with a shareable guest "Party 
 
 ## Stack
 - **Next.js 14** (App Router, TypeScript) on **Vercel**
-- **Supabase** — Postgres + magic-link auth + row-level security
+- **Supabase** — Postgres + email/password auth + row-level security (admin read/write vs. shared read-only viewer)
 - **Claude (`claude-opus-4-8`)** via the Anthropic SDK — vision bottle identification + sommelier recommendations (server-side API routes)
 - **Resend** — weekly dispatch (restock list + sommelier's pick), sent via a Vercel Cron job
 - **Tailwind CSS** — colonial theme (British racing green, oxblood, brass, parchment; Playfair Display + EB Garamond)

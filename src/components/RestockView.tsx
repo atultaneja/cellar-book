@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { levelMeta } from "@/lib/levels";
 import type { Bottle } from "@/lib/types";
 
-export function RestockView({ initial }: { initial: Bottle[] }) {
+export function RestockView({ initial, isAdmin }: { initial: Bottle[]; isAdmin: boolean }) {
   const supabase = createClient();
   const [bottles, setBottles] = useState<Bottle[]>(initial);
 
@@ -34,10 +34,10 @@ export function RestockView({ initial }: { initial: Bottle[] }) {
       ) : (
         <>
           {empty.length > 0 && (
-            <Section title="Run dry" tone="oxblood" items={empty} onMarkFull={markFull} />
+            <Section title="Run dry" tone="oxblood" items={empty} onMarkFull={markFull} isAdmin={isAdmin} />
           )}
           {low.length > 0 && (
-            <Section title="Running low" tone="brass" items={low} onMarkFull={markFull} />
+            <Section title="Running low" tone="brass" items={low} onMarkFull={markFull} isAdmin={isAdmin} />
           )}
         </>
       )}
@@ -50,11 +50,13 @@ function Section({
   tone,
   items,
   onMarkFull,
+  isAdmin,
 }: {
   title: string;
   tone: "oxblood" | "brass";
   items: Bottle[];
   onMarkFull: (id: string) => void;
+  isAdmin: boolean;
 }) {
   return (
     <section className="mb-6">
@@ -79,9 +81,11 @@ function Section({
                 {b.category} · {levelMeta(b.level).label}
               </div>
             </div>
-            <button className="club-btn-ghost !py-1.5 text-xs" onClick={() => onMarkFull(b.id)}>
-              Restocked
-            </button>
+            {isAdmin && (
+              <button className="club-btn-ghost !py-1.5 text-xs" onClick={() => onMarkFull(b.id)}>
+                Restocked
+              </button>
+            )}
           </div>
         ))}
       </div>
