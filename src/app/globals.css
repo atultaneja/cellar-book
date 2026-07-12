@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --parchment: #f4ecd8;
+  --racing: #14432a;
+}
+
+html,
+body {
+  background-color: var(--parchment);
+  color: #2b2118;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Faint aged-paper texture */
+body {
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(176, 141, 70, 0.06), transparent 40%),
+    radial-gradient(circle at 80% 90%, rgba(20, 67, 42, 0.05), transparent 45%);
+  background-attachment: fixed;
+}
+
+@layer components {
+  .club-rule {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-brass to-transparent;
+  }
+
+  .club-card {
+    @apply rounded-lg border border-brass/30 bg-parchment-card shadow-ledger;
+  }
+
+  .club-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-brass/40
+           bg-racing px-4 py-2 font-body text-sm font-semibold tracking-wide text-parchment
+           transition-colors hover:bg-racing-light active:translate-y-px disabled:opacity-50;
+  }
+
+  .club-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-brass/40
+           bg-transparent px-4 py-2 font-body text-sm font-semibold tracking-wide text-racing
+           transition-colors hover:bg-brass/10;
+  }
+
+  .club-input {
+    @apply w-full rounded-md border border-brass/40 bg-parchment px-3 py-2 font-body text-ink
+           outline-none placeholder:text-ink-soft/50 focus:border-racing focus:ring-1 focus:ring-racing;
+  }
+
+  .club-label {
+    @apply mb-1 block font-body text-xs font-semibold uppercase tracking-widest text-ink-soft;
+  }
+
+  .club-chip {
+    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 font-body text-xs font-semibold;
+  }
+}
