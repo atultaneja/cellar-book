@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { levelMeta } from "@/lib/levels";
+import { levelMeta, inStock } from "@/lib/levels";
+import { anthropic, MODEL, parseJsonResponse } from "@/lib/ai";
+import { COCKTAILS, makeable } from "@/lib/cocktails";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 // Triggered by Vercel Cron every Monday (see vercel.json).
-// Emails the restock list. Vercel automatically sends the CRON_SECRET as a
-// Bearer token, so we reject anything else.
+// Sends the restock list plus an organic "sommelier's pick of the week".
+// Vercel automatically sends the CRON_SECRET as a Bearer token.
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -18,59 +21,107 @@ export async function GET(request: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: low, error } = await supabase
-    .from("bottles")
-    .select("name, category, level")
-    .lte("level", 1)
-    .order("level", { ascending: true })
-    .order("category", { ascending: true });
+  const [{ data: low }, { data: allBottles }, { data: profileRows }] = await Promise.all([
+    supabase.from("bottles").select("name, category, level").lte("level", 1).order("level"),
+    supabase.from("bottles").select("name, brand, category, level"),
+    supabase.from("taste_profiles").select("data").limit(1),
+  ]);
 
-  if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  const restock = low ?? [];
+  const bottles = allBottles ?? [];
+
+  // ---- Sommelier's pick of the week (best-effort) ----
+  let pick: { title: string; detail: string } | null = null;
+  try {
+    const stocked = bottles.filter((b) => inStock(b.level as number));
+    const availableCats = new Set(stocked.map((b) => b.category as string));
+    const canMake = COCKTAILS.filter((c) => makeable(c, availableCats));
+    if (stocked.length > 0 && process.env.ANTHROPIC_API_KEY) {
+      const profile = profileRows?.[0]?.data ?? {};
+      const client = anthropic();
+      const res = await client.messages.create({
+        model: MODEL,
+        max_tokens: 1024,
+        system:
+          "You are the resident mixologist at the Tantaan Tiki Bar. Choose ONE drink to enjoy " +
+          "this week, from the in-stock bottles and taste profile. Prefer a makeable cocktail; " +
+          "a neat pour is fine. Return a short elegant title and one or two sentences.",
+        output_config: {
+          effort: "low",
+          format: {
+            type: "json_schema",
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              properties: { title: { type: "string" }, detail: { type: "string" } },
+              required: ["title", "detail"],
+            },
+          },
+        },
+        messages: [
+          {
+            role: "user",
+            content:
+              `PALATE: ${JSON.stringify(profile)}\n\n` +
+              `IN STOCK:\n${stocked.map((b) => `- ${b.name} [${b.category}]`).join("\n")}\n\n` +
+              `MAKEABLE COCKTAILS: ${canMake.map((c) => c.name).join(", ") || "(none)"}\n\n` +
+              `Choose this week's pour.`,
+          },
+        ],
+      });
+      pick = parseJsonResponse<{ title: string; detail: string }>(res.content);
+    }
+  } catch {
+    // Sommelier is optional — never let it block the restock email.
+    pick = null;
   }
 
-  const items = low ?? [];
-  if (items.length === 0) {
-    // Nothing to restock — send nothing, report quietly.
-    return NextResponse.json({ ok: true, sent: false, reason: "well stocked" });
+  if (restock.length === 0 && !pick) {
+    return NextResponse.json({ ok: true, sent: false, reason: "nothing to send" });
   }
 
-  const rows = items
+  const restockRows = restock
     .map(
       (b) =>
-        `<tr>
-           <td style="padding:6px 10px;border-bottom:1px solid #E7DBBE;">${escape(b.name)}</td>
-           <td style="padding:6px 10px;border-bottom:1px solid #E7DBBE;color:#5A4E3D;">${escape(b.category)}</td>
-           <td style="padding:6px 10px;border-bottom:1px solid #E7DBBE;color:${
-             b.level === 0 ? "#6E1F1B" : "#8A6D34"
-           };">${escape(levelMeta(b.level).label)}</td>
-         </tr>`
+        `<tr><td style="padding:6px 10px;border-bottom:1px solid #E7DBBE;">${escape(b.name)}</td>
+         <td style="padding:6px 10px;border-bottom:1px solid #E7DBBE;color:#5A4E3D;">${escape(b.category)}</td>
+         <td style="padding:6px 10px;border-bottom:1px solid #E7DBBE;color:${
+           b.level === 0 ? "#6E1F1B" : "#8A6D34"
+         };">${escape(levelMeta(b.level).label)}</td></tr>`
     )
     .join("");
+
+  const restockSection = restock.length
+    ? `<p style="margin:0 0 12px;color:#5A4E3D;">The following want replenishing:</p>
+       <table style="width:100%;border-collapse:collapse;font-size:15px;">
+         <thead><tr style="text-align:left;color:#14432A;font-size:12px;text-transform:uppercase;letter-spacing:1px;">
+           <th style="padding:6px 10px;">Bottle</th><th style="padding:6px 10px;">Category</th><th style="padding:6px 10px;">Level</th>
+         </tr></thead><tbody>${restockRows}</tbody></table>`
+    : `<p style="margin:0;color:#5A4E3D;">The bar is well provisioned — nothing to restock.</p>`;
+
+  const pickSection = pick
+    ? `<div style="margin-top:22px;padding-top:18px;border-top:1px solid #E7DBBE;">
+         <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#B08D46;">Sommelier's pick of the week</div>
+         <div style="font-size:18px;font-weight:bold;color:#14432A;margin:4px 0;">${escape(pick.title)}</div>
+         <div style="color:#2B2118;">${escape(pick.detail)}</div>
+       </div>`
+    : "";
 
   const html = `
   <div style="font-family:Georgia,'Times New Roman',serif;background:#F4ECD8;padding:28px;color:#2B2118;">
     <div style="max-width:520px;margin:0 auto;background:#FBF6E9;border:1px solid rgba(176,141,70,0.35);border-radius:10px;overflow:hidden;">
       <div style="background:#14432A;color:#F4ECD8;padding:20px 24px;">
-        <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#C9A85E;">The Cellar Book</div>
-        <div style="font-size:22px;font-weight:bold;">This Week's Restock List</div>
+        <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#C9A85E;">Tantaan Tiki Bar</div>
+        <div style="font-size:22px;font-weight:bold;">Your Weekly Dispatch</div>
       </div>
-      <div style="padding:22px 24px;">
-        <p style="margin:0 0 14px;color:#5A4E3D;">Good morning. The following want replenishing:</p>
-        <table style="width:100%;border-collapse:collapse;font-size:15px;">
-          <thead>
-            <tr style="text-align:left;color:#14432A;font-size:12px;text-transform:uppercase;letter-spacing:1px;">
-              <th style="padding:6px 10px;">Bottle</th>
-              <th style="padding:6px 10px;">Category</th>
-              <th style="padding:6px 10px;">Level</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <p style="margin:18px 0 0;font-size:13px;color:#5A4E3D;">${items.length} item(s) to restock. Cheers.</p>
-      </div>
+      <div style="padding:22px 24px;">${restockSection}${pickSection}</div>
     </div>
   </div>`;
+
+  const subject =
+    restock.length > 0
+      ? `Tantaan Tiki Bar — ${restock.length} to restock${pick ? ` · this week: ${pick.title}` : ""}`
+      : `Tantaan Tiki Bar — this week: ${pick!.title}`;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -81,7 +132,7 @@ export async function GET(request: Request) {
     body: JSON.stringify({
       from: process.env.RESTOCK_EMAIL_FROM,
       to: [process.env.RESTOCK_EMAIL_TO],
-      subject: `Restock list — ${items.length} bottle(s) running low`,
+      subject,
       html,
     }),
   });
@@ -91,7 +142,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "email failed", detail }, { status: 502 });
   }
 
-  return NextResponse.json({ ok: true, sent: true, count: items.length });
+  return NextResponse.json({ ok: true, sent: true, restock: restock.length, pick: !!pick });
 }
 
 function escape(s: string) {

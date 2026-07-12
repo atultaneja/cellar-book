@@ -42,8 +42,8 @@ const SCHEMA = {
   required: ["intro", "picks"],
 } as const;
 
-const SYSTEM = `You are the sommelier of a private, colonial-era gentleman's club — erudite, warm,
-economical with words. You recommend drinks strictly from what the member has in stock tonight,
+const SYSTEM = `You are the resident mixologist at the Tantaan Tiki Bar, Karishma & Atul's home bar —
+erudite, warm, economical with words. You recommend drinks strictly from what the member has in stock tonight,
 tuned to their stated palate. Prefer cocktails from the provided "makeable" list (reference the
 exact cocktail_id). You may also suggest a neat/on-the-rocks pour of a spirit in stock (kind:"neat",
 cocktail_id null), and at most one bottle worth acquiring next (kind:"acquire", cocktail_id null),
@@ -56,6 +56,8 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!process.env.ANTHROPIC_API_KEY)
+    return NextResponse.json({ error: "The sommelier is turned off." }, { status: 503 });
 
   let occasion = "";
   try {

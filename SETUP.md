@@ -1,4 +1,4 @@
-# The Cellar Book — Setup Guide
+# Tantaan Tiki Bar — Setup Guide
 
 A step-by-step guide to putting your home-bar app on the web. No coding required —
 you'll copy, paste, and click. Budget **30–40 minutes** the first time.
@@ -11,6 +11,7 @@ You'll create **three free accounts** and connect them:
 | **Supabase** | Stores your bottles + handles your login | Free |
 | **Vercel** | Puts the app on the web | Free |
 | **Resend** | Sends the weekly restock email | Free |
+| **Anthropic (Claude)** | Reads bottle photos + powers recommendations | Pay-as-you-go (pennies) |
 
 Do the steps **in order**. Each one ends with "you should see…" so you know it worked.
 
@@ -31,7 +32,7 @@ Do the steps **in order**. Each one ends with "you should see…" so you know it
    ```
    git init
    git add .
-   git commit -m "The Cellar Book"
+   git commit -m "Tantaan Tiki Bar"
    git branch -M main
    git remote add origin https://github.com/YOUR-USERNAME/cellar-book.git
    git push -u origin main
@@ -77,6 +78,17 @@ Do the steps **in order**. Each one ends with "you should see…" so you know it
 
 ---
 
+## Part 3b — Get your Claude key (Anthropic) (5 min)
+
+This powers the photo scanner and the sommelier recommendations.
+
+1. Go to **[console.anthropic.com](https://console.anthropic.com)** → sign up.
+2. Add a small amount of credit under **Billing** (usage is pennies per scan/recommendation).
+3. Go to **API Keys** → **Create Key**. Copy it (starts with `sk-ant-`) — you'll paste it
+   into Vercel in the next part.
+
+---
+
 ## Part 4 — Put it on the web (Vercel) (10 min)
 
 1. Go to **[vercel.com](https://vercel.com)** → **Sign Up** → **Continue with GitHub**.
@@ -92,8 +104,9 @@ Do the steps **in order**. Each one ends with "you should see…" so you know it
    | `NEXT_PUBLIC_SITE_URL` | leave blank for now — you'll set it in step 6 |
    | `RESEND_API_KEY` | your Resend key (`re_…`) |
    | `RESTOCK_EMAIL_TO` | your email address |
-   | `RESTOCK_EMAIL_FROM` | `The Cellar Book <onboarding@resend.dev>` |
+   | `RESTOCK_EMAIL_FROM` | `Tantaan Tiki Bar <onboarding@resend.dev>` |
    | `CRON_SECRET` | any long random text, e.g. `cellar-7Kp2mQ9xLr4` |
+   | `ANTHROPIC_API_KEY` | your Claude key (`sk-ant-…`) |
 
 4. Click **Deploy**. Wait ~2 minutes.
 
@@ -107,19 +120,28 @@ Do the steps **in order**. Each one ends with "you should see…" so you know it
    **URL Configuration** → set **Site URL** to your Vercel address, and under
    **Redirect URLs** add `https://YOUR-ADDRESS.vercel.app/auth/callback`. Save.
 
-**You should see:** open your Vercel address on your phone → the green "The Cellar Book"
+**You should see:** open your Vercel address on your phone → the "Tantaan Tiki Bar"
 login screen. Enter your email, tap the link it sends, and you're in.
 
 ---
 
 ## Part 5 — First use
 
-- **Load your bar:** tap **Cellar → Bulk add**. Paste your bottles, one per line, as
-  `Name | Category` (e.g. `Lagavulin 16 | Scotch`). Category is optional. Then adjust
-  levels by tapping the level bar on each bottle.
+- **Load your bar, two ways:**
+  - **Scan:** tap **Cellar → 📷 Scan**, photograph a bottle or a whole shelf (up to 6 photos).
+    Claude reads the labels and fills in name/brand/category; you confirm before saving.
+    Fastest way through 100+ bottles.
+  - **Bulk paste:** tap **Cellar → Bulk**, one bottle per line as `Name | Category`
+    (e.g. `Lagavulin 16 | Scotch`). Category optional.
+  - Adjust levels anytime by tapping the level bar on each bottle.
+- **Set your taste profile:** tap **Recommend → Set profile**. Answer the palate questions once —
+  the app remembers them and tunes every recommendation to you.
+- **Ask the sommelier:** on **Recommend**, type what you're in the mood for and tap
+  **Recommend me something** for a tailored pick from tonight's stock.
 - **Add to your phone's home screen:** in Safari, tap the **Share** icon → **Add to Home
   Screen**. Now it opens like a normal app.
-- **Weekly email:** it sends automatically every **Monday at 9am UTC**. To change the day/time,
+- **Weekly email:** every **Monday at 9am UTC** you get a dispatch with your restock list plus
+  a "sommelier's pick of the week" chosen from your stock and taste profile. To change the day/time,
   edit the `schedule` line in `vercel.json` ([cron format](https://crontab.guru)) and push again.
 - **Party mode:** tap **Party → Open the bar**, tick the bottles and cocktails on offer,
   and share the **Guest link**. Guests need no login and see only that evening's menu.

@@ -30,10 +30,10 @@ export default function LoginPage() {
     <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6">
       <Crest size={72} />
       <h1 className="mt-5 text-center font-display text-3xl font-bold text-racing">
-        The Cellar Book
+        Tantaan Tiki Bar
       </h1>
       <p className="mt-1 text-center font-body text-sm italic text-ink-soft">
-        A gentleman&rsquo;s record of the home bar.
+        Karishma &amp; Atul&rsquo;s bar — good friends, good times.
       </p>
       <div className="club-rule my-6" />
 

@@ -23,7 +23,11 @@ export default async function RecommendationsPage() {
 
   return (
     <AppShell>
-      <RecommendationsView bottles={(bottles as Bottle[]) ?? []} initialProfile={profile} />
+      <RecommendationsView
+        bottles={(bottles as Bottle[]) ?? []}
+        initialProfile={profile}
+        aiEnabled={!!process.env.ANTHROPIC_API_KEY}
+      />
     </AppShell>
   );
 }

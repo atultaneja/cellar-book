@@ -30,9 +30,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/cellar" className="flex items-center gap-3">
             <Crest size={40} />
             <div className="leading-tight">
-              <div className="font-display text-xl font-bold text-racing">The Cellar Book</div>
+              <div className="font-display text-xl font-bold text-racing">Tantaan Tiki Bar</div>
               <div className="font-body text-[11px] uppercase tracking-[0.2em] text-ink-soft">
-                Est. at Home
+                Good friends · good times
               </div>
             </div>
           </Link>

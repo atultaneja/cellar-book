@@ -83,7 +83,7 @@ export default async function PublicPartyPage({ params }: { params: { token: str
         <p className="font-body italic text-ink-soft">The host is still setting the table…</p>
       )}
 
-      <p className="mt-10 font-body text-xs italic text-ink-soft">Poured from The Cellar Book</p>
+      <p className="mt-10 font-body text-xs italic text-ink-soft">Poured at the Tantaan Tiki Bar</p>
     </Frame>
   );
 }

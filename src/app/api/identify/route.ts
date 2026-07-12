@@ -56,6 +56,8 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!process.env.ANTHROPIC_API_KEY)
+    return NextResponse.json({ error: "Photo scanning is turned off." }, { status: 503 });
 
   let images: ImageInput[];
   try {

@@ -17,8 +17,8 @@ const body = EB_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "The Cellar Book",
-  description: "A gentleman's record of the home bar.",
+  title: "Tantaan Tiki Bar",
+  description: "Karishma & Atul's home bar — good friends, good times.",
 };
 
 export const viewport: Viewport = {

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CATEGORIES } from "@/lib/categories";
 import { LEVELS } from "@/lib/levels";
+import { CategorySelect } from "./CategorySelect";
 
 type Candidate = {
   name: string;
@@ -164,15 +164,10 @@ export function PhotoScan({
                   onChange={(e) => patch(i, { name: e.target.value })}
                 />
                 <div className="grid grid-cols-2 gap-2">
-                  <select
-                    className="club-input"
+                  <CategorySelect
                     value={c.category}
-                    onChange={(e) => patch(i, { category: e.target.value })}
-                  >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat}>{cat}</option>
-                    ))}
-                  </select>
+                    onChange={(v) => patch(i, { category: v })}
+                  />
                   <select
                     className="club-input"
                     value={c.level}

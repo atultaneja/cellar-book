@@ -15,7 +15,7 @@ export default async function CellarPage() {
 
   return (
     <AppShell>
-      <CellarView initial={(data as Bottle[]) ?? []} />
+      <CellarView initial={(data as Bottle[]) ?? []} aiEnabled={!!process.env.ANTHROPIC_API_KEY} />
     </AppShell>
   );
 }

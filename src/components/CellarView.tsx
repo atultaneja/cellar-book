@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { CATEGORIES } from "@/lib/categories";
+import { CATEGORIES, FAMILIES, familyOf } from "@/lib/categories";
 import { inStock } from "@/lib/levels";
 import type { Bottle } from "@/lib/types";
+import { CategorySelect } from "./CategorySelect";
 import { LevelPicker } from "./LevelPicker";
 import { PhotoScan } from "./PhotoScan";
 
@@ -12,7 +13,7 @@ type Draft = { name: string; brand: string; category: string; level: number };
 
 const EMPTY_DRAFT: Draft = { name: "", brand: "", category: "Other", level: 5 };
 
-export function CellarView({ initial }: { initial: Bottle[] }) {
+export function CellarView({ initial, aiEnabled }: { initial: Bottle[]; aiEnabled: boolean }) {
   const supabase = createClient();
   const [bottles, setBottles] = useState<Bottle[]>(initial);
   const [query, setQuery] = useState("");
@@ -33,18 +34,24 @@ export function CellarView({ initial }: { initial: Bottle[] }) {
         b.name.toLowerCase().includes(q) ||
         (b.brand ?? "").toLowerCase().includes(q) ||
         b.category.toLowerCase().includes(q);
-      const matchesC = filter === "All" || b.category === filter;
+      const matchesC = filter === "All" || familyOf(b.category) === filter;
       return matchesQ && matchesC;
     });
   }, [bottles, query, filter]);
 
+  // Group bottles under their broad family (Whiskey, Gin, Wine, …),
+  // ordered as in FAMILIES; within a family, by category then name.
   const grouped = useMemo(() => {
     const map = new Map<string, Bottle[]>();
     for (const b of filtered) {
-      if (!map.has(b.category)) map.set(b.category, []);
-      map.get(b.category)!.push(b);
+      const fam = familyOf(b.category);
+      if (!map.has(fam)) map.set(fam, []);
+      map.get(fam)!.push(b);
     }
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    for (const list of map.values()) {
+      list.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+    }
+    return FAMILIES.filter((f) => map.has(f)).map((f) => [f, map.get(f)!] as const);
   }, [filtered]);
 
   async function addSingle() {
@@ -127,13 +134,15 @@ export function CellarView({ initial }: { initial: Bottle[] }) {
       </div>
 
       {/* Controls */}
-      <div className="mb-4 grid grid-cols-3 gap-2">
-        <button
-          className={mode === "scan" ? "club-btn" : "club-btn-ghost"}
-          onClick={() => setMode(mode === "scan" ? "none" : "scan")}
-        >
-          📷 Scan
-        </button>
+      <div className={`mb-4 grid gap-2 ${aiEnabled ? "grid-cols-3" : "grid-cols-2"}`}>
+        {aiEnabled && (
+          <button
+            className={mode === "scan" ? "club-btn" : "club-btn-ghost"}
+            onClick={() => setMode(mode === "scan" ? "none" : "scan")}
+          >
+            📷 Scan
+          </button>
+        )}
         <button
           className={mode === "single" ? "club-btn" : "club-btn-ghost"}
           onClick={() => setMode(mode === "single" ? "none" : "single")}
@@ -148,7 +157,9 @@ export function CellarView({ initial }: { initial: Bottle[] }) {
         </button>
       </div>
 
-      {mode === "scan" && <PhotoScan onAdd={addMany} onDone={() => setMode("none")} />}
+      {aiEnabled && mode === "scan" && (
+        <PhotoScan onAdd={addMany} onDone={() => setMode("none")} />
+      )}
 
       {mode === "single" && (
         <div className="club-card mb-4 p-4">
@@ -173,15 +184,10 @@ export function CellarView({ initial }: { initial: Bottle[] }) {
             </div>
             <div>
               <label className="club-label">Category</label>
-              <select
-                className="club-input"
+              <CategorySelect
                 value={draft.category}
-                onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
+                onChange={(v) => setDraft({ ...draft, category: v })}
+              />
             </div>
           </div>
           <button className="club-btn mt-3 w-full" disabled={busy} onClick={addSingle}>
@@ -218,13 +224,13 @@ export function CellarView({ initial }: { initial: Bottle[] }) {
           onChange={(e) => setQuery(e.target.value)}
         />
         <select
-          className="club-input w-40"
+          className="club-input w-44"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         >
           <option>All</option>
-          {CATEGORIES.map((c) => (
-            <option key={c}>{c}</option>
+          {FAMILIES.map((f) => (
+            <option key={f}>{f}</option>
           ))}
         </select>
       </div>
@@ -238,11 +244,11 @@ export function CellarView({ initial }: { initial: Bottle[] }) {
           </p>
         </div>
       ) : (
-        grouped.map(([category, items]) => (
-          <section key={category} className="mb-5">
+        grouped.map(([family, items]) => (
+          <section key={family} className="mb-5">
             <div className="mb-2 flex items-center gap-3">
               <h2 className="font-display text-sm font-semibold uppercase tracking-widest text-racing">
-                {category}
+                {family}
               </h2>
               <span className="font-body text-xs text-ink-soft">{items.length}</span>
               <div className="club-rule flex-1" />
@@ -261,9 +267,10 @@ export function CellarView({ initial }: { initial: Bottle[] }) {
                     <div className="flex items-center gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-body font-semibold text-ink">{b.name}</div>
-                        {b.brand && (
-                          <div className="truncate font-body text-xs text-ink-soft">{b.brand}</div>
-                        )}
+                        <div className="truncate font-body text-xs text-ink-soft">
+                          {b.category}
+                          {b.brand ? ` · ${b.brand}` : ""}
+                        </div>
                       </div>
                       <LevelPicker level={b.level} onChange={(lv) => setLevel(b.id, lv)} />
                       <button
@@ -308,15 +315,7 @@ function EditRow({
         value={brand}
         onChange={(e) => setBrand(e.target.value)}
       />
-      <select
-        className="club-input"
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-      >
-        {CATEGORIES.map((c) => (
-          <option key={c}>{c}</option>
-        ))}
-      </select>
+      <CategorySelect value={category} onChange={setCategory} />
       <div className="flex gap-2">
         <button
           className="club-btn flex-1"
