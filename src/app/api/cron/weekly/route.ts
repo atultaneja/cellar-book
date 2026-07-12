@@ -23,7 +23,12 @@ export async function GET(request: Request) {
   );
 
   const [{ data: low }, { data: allBottles }, { data: profileRows }] = await Promise.all([
-    supabase.from("bottles").select("name, category, level").lte("level", 1).order("level"),
+    supabase
+      .from("bottles")
+      .select("name, category, level")
+      .lte("level", 1)
+      .eq("restock_ignore", false)
+      .order("level"),
     supabase.from("bottles").select("name, brand, category, level"),
     supabase.from("taste_profiles").select("data").limit(1),
   ]);

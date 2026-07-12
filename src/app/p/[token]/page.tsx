@@ -1,4 +1,5 @@
 import { Crest } from "@/components/Crest";
+import { PartyContributions } from "@/components/PartyContributions";
 import { createClient } from "@/lib/supabase/server";
 import { cocktailById } from "@/lib/cocktails";
 import type { PublicParty } from "@/lib/types";
@@ -80,8 +81,11 @@ export default async function PublicPartyPage({ params }: { params: { token: str
       )}
 
       {offered.length === 0 && party.bottles.length === 0 && (
-        <p className="font-body italic text-ink-soft">The host is still setting the table…</p>
+        <p className="mb-8 font-body italic text-ink-soft">The host is still setting the table…</p>
       )}
+
+      <div className="club-rule my-8 w-full" />
+      <PartyContributions token={params.token} initial={party.contributions ?? []} />
 
       <p className="mt-10 font-body text-xs italic text-ink-soft">Poured at the Tantaan Tiki Bar</p>
     </Frame>

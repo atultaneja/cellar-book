@@ -65,6 +65,9 @@ alter table public.parties alter column user_id set default auth.uid();
 -- Bottle size (e.g. "750 ml", "1 L"); "Unknown" when not specified.
 alter table public.bottles add column if not exists size text;
 
+-- Dismissed from the restock list (owner isn't planning to replenish it).
+alter table public.bottles add column if not exists restock_ignore boolean not null default false;
+
 -- ┌────────────────────────────────────────────────────────────┐
 -- │  SET YOUR ADMIN EMAIL HERE — the read/write (owner) login.   │
 -- │  Any other confirmed login is a read-only viewer.            │
@@ -117,9 +120,27 @@ create policy "admin writes party_cocktails" on public.party_cocktails
   for all using (public.is_admin()) with check (public.is_admin());
 
 -- ============================================================
+--  GUEST CONTRIBUTIONS — what guests say they're bringing
+-- ============================================================
+create table if not exists public.party_contributions (
+  id          uuid primary key default gen_random_uuid(),
+  party_id    uuid not null references public.parties (id) on delete cascade,
+  guest_name  text not null,
+  item        text not null,
+  created_at  timestamptz not null default now()
+);
+
+alter table public.party_contributions enable row level security;
+-- The host (any signed-in user) can read; guests read/write only via the
+-- SECURITY DEFINER functions below (get_party_by_token / add_party_contribution).
+drop policy if exists "read contributions" on public.party_contributions;
+create policy "read contributions" on public.party_contributions
+  for select using (auth.uid() is not null);
+
+-- ============================================================
 --  PUBLIC PARTY VIEW
 --  Guests open a share link with no login. This function returns
---  only the chosen party's open bottles + cocktails, nothing else.
+--  only the chosen party's open bottles, cocktails & contributions.
 -- ============================================================
 create or replace function public.get_party_by_token(p_token text)
 returns json
@@ -142,6 +163,12 @@ as $$
       select json_agg(pc.cocktail_id)
       from public.party_cocktails pc
       where pc.party_id = p.id
+    ), '[]'::json),
+    'contributions', coalesce((
+      select json_agg(json_build_object('guest_name', c.guest_name, 'item', c.item)
+                      order by c.created_at)
+      from public.party_contributions c
+      where c.party_id = p.id
     ), '[]'::json)
   ) end
   from public.parties p
@@ -150,6 +177,27 @@ $$;
 
 -- allow anonymous guests to call ONLY this function
 grant execute on function public.get_party_by_token(text) to anon, authenticated;
+
+-- Guests add what they're bringing, via the share token (no login).
+create or replace function public.add_party_contribution(p_token text, p_guest text, p_item text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare pid uuid;
+begin
+  select id into pid from public.parties where token = p_token and active = true;
+  if pid is null then raise exception 'party not found or closed'; end if;
+  if length(coalesce(trim(p_guest), '')) = 0 or length(coalesce(trim(p_item), '')) = 0 then
+    raise exception 'name and item are required';
+  end if;
+  insert into public.party_contributions (party_id, guest_name, item)
+    values (pid, left(trim(p_guest), 80), left(trim(p_item), 120));
+end;
+$$;
+
+grant execute on function public.add_party_contribution(text, text, text) to anon, authenticated;
 
 -- ============================================================
 --  TASTE PROFILE — the app's memory of your palate

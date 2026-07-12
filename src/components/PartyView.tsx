@@ -12,11 +12,13 @@ export function PartyView({
   bottles,
   initialOpenBottleIds,
   initialCocktailIds,
+  contributions,
 }: {
   initialParty: Party | null;
   bottles: Bottle[];
   initialOpenBottleIds: string[];
   initialCocktailIds: string[];
+  contributions: { guest_name: string; item: string }[];
 }) {
   const supabase = createClient();
   const [party, setParty] = useState<Party | null>(initialParty);
@@ -149,9 +151,25 @@ export function PartyView({
           </button>
         </div>
         <p className="mt-2 font-body text-xs text-ink-soft">
-          Share this with guests. They see only tonight&rsquo;s bottles and cocktails.
+          Share this with guests. They see tonight&rsquo;s bottles and cocktails, and can add
+          what they&rsquo;re bringing.
         </p>
       </div>
+
+      {/* What guests are bringing (read-only) */}
+      {contributions.length > 0 && (
+        <section className="mb-6">
+          <SectionHead label={`Guests are bringing (${contributions.length})`} />
+          <div className="club-card divide-y divide-brass/20">
+            {contributions.map((c, i) => (
+              <div key={i} className="flex items-baseline justify-between gap-3 px-4 py-2.5">
+                <span className="font-body text-ink">{c.item}</span>
+                <span className="font-body text-xs text-ink-soft">{c.guest_name}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Cocktails on offer */}
       <section className="mb-6">

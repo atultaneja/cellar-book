@@ -25,13 +25,20 @@ export default async function PartyPage() {
 
   let openBottleIds: string[] = [];
   let cocktailIds: string[] = [];
+  let contributions: { guest_name: string; item: string }[] = [];
   if (party) {
-    const [{ data: pb }, { data: pc }] = await Promise.all([
+    const [{ data: pb }, { data: pc }, { data: cc }] = await Promise.all([
       supabase.from("party_bottles").select("bottle_id").eq("party_id", party.id),
       supabase.from("party_cocktails").select("cocktail_id").eq("party_id", party.id),
+      supabase
+        .from("party_contributions")
+        .select("guest_name, item")
+        .eq("party_id", party.id)
+        .order("created_at"),
     ]);
     openBottleIds = (pb ?? []).map((r) => r.bottle_id as string);
     cocktailIds = (pc ?? []).map((r) => r.cocktail_id as string);
+    contributions = (cc as { guest_name: string; item: string }[]) ?? [];
   }
 
   return (
@@ -41,6 +48,7 @@ export default async function PartyPage() {
         bottles={(bottles as Bottle[]) ?? []}
         initialOpenBottleIds={openBottleIds}
         initialCocktailIds={cocktailIds}
+        contributions={contributions}
       />
     </AppShell>
   );

@@ -6,6 +6,7 @@ export type Bottle = {
   category: string;
   size: string | null; // e.g. "750 ml", "1 L", "Unknown"
   level: number; // 0..5
+  restock_ignore?: boolean; // dismissed from the restock list
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -27,4 +28,5 @@ export type PublicParty = {
   active: boolean;
   bottles: { name: string; brand: string | null; category: string }[];
   cocktails: string[];
+  contributions: { guest_name: string; item: string }[];
 };
