@@ -4,6 +4,7 @@ export type Bottle = {
   name: string;
   brand: string | null;
   category: string;
+  size: string | null; // e.g. "750 ml", "1 L", "Unknown"
   level: number; // 0..5
   notes: string | null;
   created_at: string;

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { COCKTAILS, makeable } from "@/lib/cocktails";
+import { tokensFor } from "@/lib/categories";
 import { inStock } from "@/lib/levels";
 import type { Bottle, Party } from "@/lib/types";
 
@@ -29,7 +30,7 @@ export function PartyView({
 
   const availableCats = useMemo(() => {
     const s = new Set<string>();
-    for (const b of stocked) s.add(b.category);
+    for (const b of stocked) tokensFor(b.category).forEach((t) => s.add(t));
     return s;
   }, [stocked]);
 

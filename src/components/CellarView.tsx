@@ -4,14 +4,21 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CATEGORIES, FAMILIES, familyOf } from "@/lib/categories";
 import { inStock } from "@/lib/levels";
+import { SIZE_OPTIONS, DEFAULT_SIZE } from "@/lib/sizes";
 import type { Bottle } from "@/lib/types";
 import { CategorySelect } from "./CategorySelect";
 import { LevelPicker } from "./LevelPicker";
 import { PhotoScan } from "./PhotoScan";
 
-type Draft = { name: string; brand: string; category: string; level: number };
+type Draft = { name: string; brand: string; category: string; size: string; level: number };
 
-const EMPTY_DRAFT: Draft = { name: "", brand: "", category: "Other", level: 5 };
+const EMPTY_DRAFT: Draft = {
+  name: "",
+  brand: "",
+  category: "Other",
+  size: DEFAULT_SIZE,
+  level: 5,
+};
 
 export function CellarView({
   initial,
@@ -71,6 +78,7 @@ export function CellarView({
         name: draft.name.trim(),
         brand: draft.brand.trim() || null,
         category: draft.category,
+        size: draft.size,
         level: draft.level,
       })
       .select()
@@ -106,7 +114,7 @@ export function CellarView({
   }
 
   async function addMany(
-    rows: { name: string; brand: string | null; category: string; level: number }[]
+    rows: { name: string; brand: string | null; category: string; size: string; level: number }[]
   ) {
     if (rows.length === 0) return;
     const { data, error } = await supabase.from("bottles").insert(rows).select();
@@ -199,6 +207,18 @@ export function CellarView({
                 onChange={(v) => setDraft({ ...draft, category: v })}
               />
             </div>
+            <div>
+              <label className="club-label">Bottle size</label>
+              <select
+                className="club-input"
+                value={draft.size}
+                onChange={(e) => setDraft({ ...draft, size: e.target.value })}
+              >
+                {SIZE_OPTIONS.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <button className="club-btn mt-3 w-full" disabled={busy} onClick={addSingle}>
             {busy ? "Saving…" : "Add to cellar"}
@@ -279,6 +299,7 @@ export function CellarView({
                         <div className="truncate font-body font-semibold text-ink">{b.name}</div>
                         <div className="truncate font-body text-xs text-ink-soft">
                           {b.category}
+                          {b.size && b.size !== "Unknown" ? ` · ${b.size}` : ""}
                           {b.brand ? ` · ${b.brand}` : ""}
                         </div>
                       </div>
@@ -321,6 +342,7 @@ function EditRow({
   const [name, setName] = useState(bottle.name);
   const [brand, setBrand] = useState(bottle.brand ?? "");
   const [category, setCategory] = useState(bottle.category);
+  const [size, setSize] = useState(bottle.size ?? DEFAULT_SIZE);
 
   return (
     <div className="grid grid-cols-1 gap-2">
@@ -332,10 +354,17 @@ function EditRow({
         onChange={(e) => setBrand(e.target.value)}
       />
       <CategorySelect value={category} onChange={setCategory} />
+      <select className="club-input" value={size} onChange={(e) => setSize(e.target.value)}>
+        {SIZE_OPTIONS.map((s) => (
+          <option key={s}>{s}</option>
+        ))}
+      </select>
       <div className="flex gap-2">
         <button
           className="club-btn flex-1"
-          onClick={() => onSave(bottle.id, { name: name.trim(), brand: brand.trim() || null, category })}
+          onClick={() =>
+            onSave(bottle.id, { name: name.trim(), brand: brand.trim() || null, category, size })
+          }
         >
           Save
         </button>

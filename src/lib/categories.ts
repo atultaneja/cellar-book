@@ -1,5 +1,6 @@
-// Fine-grained spirit categories. These double as the ingredient vocabulary
-// the cocktail recommender matches against.
+// Fine-grained categories used for cataloguing. Whiskies are broken out by
+// style (incl. Indian single malt). Cocktail matching still works because each
+// category maps to the base-spirit "token" recipes call for (see tokensFor).
 export const CATEGORIES = [
   "Gin",
   "Vodka",
@@ -7,10 +8,18 @@ export const CATEGORIES = [
   "Dark Rum",
   "Tequila",
   "Mezcal",
+  // Whiskey family — granular
+  "Single Malt Scotch",
+  "Blended Scotch",
+  "Blended Malt Scotch",
+  "Irish Whiskey",
   "Bourbon",
   "Rye Whiskey",
-  "Scotch",
-  "Irish Whiskey",
+  "Tennessee Whiskey",
+  "Japanese Whisky",
+  "Indian Single Malt",
+  "Other Whiskey",
+  //
   "Cognac / Brandy",
   "Sweet Vermouth",
   "Dry Vermouth",
@@ -51,12 +60,17 @@ export const FAMILIES = [
 
 export type Family = (typeof FAMILIES)[number];
 
-// Every fine-grained category rolls up to exactly one family.
 export const CATEGORY_FAMILY: Record<Category, Family> = {
+  "Single Malt Scotch": "Whiskey",
+  "Blended Scotch": "Whiskey",
+  "Blended Malt Scotch": "Whiskey",
+  "Irish Whiskey": "Whiskey",
   Bourbon: "Whiskey",
   "Rye Whiskey": "Whiskey",
-  Scotch: "Whiskey",
-  "Irish Whiskey": "Whiskey",
+  "Tennessee Whiskey": "Whiskey",
+  "Japanese Whisky": "Whiskey",
+  "Indian Single Malt": "Whiskey",
+  "Other Whiskey": "Whiskey",
   Gin: "Gin",
   Vodka: "Vodka",
   "White Rum": "Rum",
@@ -84,13 +98,38 @@ export const CATEGORY_FAMILY: Record<Category, Family> = {
 };
 
 export function familyOf(category: string): Family {
-  return CATEGORY_FAMILY[category as Category] ?? "Other";
+  const fam = CATEGORY_FAMILY[category as Category];
+  if (fam) return fam;
+  // Graceful fallback for legacy/free-text values (e.g. an old "Scotch").
+  const c = category.toLowerCase();
+  if (c.includes("whisk") || c === "scotch" || c === "bourbon" || c === "rye") return "Whiskey";
+  if (c.includes("wine") || c.includes("port") || c.includes("sherry") || c.includes("champagne"))
+    return "Wine";
+  return "Other";
 }
 
-// Categories grouped under their family — used for grouped <select> dropdowns.
+// Categories grouped under their family — for grouped <select> dropdowns.
 export const CATEGORIES_BY_FAMILY: { family: Family; categories: Category[] }[] = FAMILIES.map(
   (family) => ({
     family,
     categories: CATEGORIES.filter((c) => CATEGORY_FAMILY[c] === family),
   })
 ).filter((g) => g.categories.length > 0);
+
+// Which base-spirit "tokens" a category can stand in for, for cocktail matching.
+// Most categories are their own token; the granular whiskies map to the styles
+// recipes reference (Scotch / Bourbon / Rye / Irish).
+const CATEGORY_SATISFIES: Record<string, string[]> = {
+  "Single Malt Scotch": ["Scotch"],
+  "Blended Scotch": ["Scotch"],
+  "Blended Malt Scotch": ["Scotch"],
+  "Japanese Whisky": ["Scotch"],
+  "Indian Single Malt": ["Scotch"],
+  "Tennessee Whiskey": ["Bourbon"],
+  "Other Whiskey": ["Scotch", "Bourbon"],
+  // Bourbon, Rye Whiskey, Irish Whiskey satisfy their own name (identity).
+};
+
+export function tokensFor(category: string): string[] {
+  return CATEGORY_SATISFIES[category] ?? [category];
+}

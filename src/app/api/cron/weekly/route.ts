@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { levelMeta, inStock } from "@/lib/levels";
 import { anthropic, MODEL, parseJsonResponse } from "@/lib/ai";
 import { COCKTAILS, makeable } from "@/lib/cocktails";
+import { tokensFor } from "@/lib/categories";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -34,7 +35,8 @@ export async function GET(request: Request) {
   let pick: { title: string; detail: string } | null = null;
   try {
     const stocked = bottles.filter((b) => inStock(b.level as number));
-    const availableCats = new Set(stocked.map((b) => b.category as string));
+    const availableCats = new Set<string>();
+    for (const b of stocked) tokensFor(b.category as string).forEach((t) => availableCats.add(t));
     const canMake = COCKTAILS.filter((c) => makeable(c, availableCats));
     if (stocked.length > 0 && process.env.ANTHROPIC_API_KEY) {
       const profile = profileRows?.[0]?.data ?? {};

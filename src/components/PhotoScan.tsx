@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { LEVELS } from "@/lib/levels";
+import { SIZE_OPTIONS, normalizeSize } from "@/lib/sizes";
 import { CategorySelect } from "./CategorySelect";
 
 type Candidate = {
   name: string;
   brand: string | null;
   category: string;
+  size: string;
   guessed_level: number | null;
   confidence: "high" | "medium" | "low";
   include: boolean;
@@ -37,7 +39,9 @@ export function PhotoScan({
   onAdd,
   onDone,
 }: {
-  onAdd: (bottles: { name: string; brand: string | null; category: string; level: number }[]) => Promise<void>;
+  onAdd: (
+    bottles: { name: string; brand: string | null; category: string; size: string; level: number }[]
+  ) => Promise<void>;
   onDone: () => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -62,6 +66,7 @@ export function PhotoScan({
       if (!res.ok) throw new Error(json.error || "Could not read the photo");
       const found: Candidate[] = (json.bottles ?? []).map((b: Omit<Candidate, "include" | "level">) => ({
         ...b,
+        size: normalizeSize(b.size),
         include: true,
         // Clamp to the valid 0–5 range (DB rejects anything outside it).
         level: Math.min(5, Math.max(0, b.guessed_level ?? 5)),
@@ -89,6 +94,7 @@ export function PhotoScan({
         name: c.name.trim(),
         brand: c.brand?.trim() || null,
         category: c.category,
+        size: c.size,
         level: c.level,
       }))
     );
@@ -171,6 +177,17 @@ export function PhotoScan({
                   />
                   <select
                     className="club-input"
+                    value={c.size}
+                    onChange={(e) => patch(i, { size: e.target.value })}
+                  >
+                    {SIZE_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {s === "Unknown" ? "Size — ?" : s}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="club-input col-span-2"
                     value={c.level}
                     onChange={(e) => patch(i, { level: Number(e.target.value) })}
                   >

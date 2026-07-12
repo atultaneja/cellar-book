@@ -1,5 +1,3 @@
-import type { Category } from "./categories";
-
 export type Mood =
   | "Aperitif"
   | "Nightcap"
@@ -11,8 +9,9 @@ export type Mood =
 export type Cocktail = {
   id: string;
   name: string;
-  // Spirit categories that MUST be in stock to make this drink.
-  requires: Category[];
+  // Base-spirit tokens that MUST be in stock to make this drink
+  // (matched against tokensFor(category); see categories.ts).
+  requires: string[];
   // Everyday pantry items assumed on hand (shown for reference only).
   pantry: string[];
   method: string;

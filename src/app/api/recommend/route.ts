@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { anthropic, MODEL, parseJsonResponse } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
 import { COCKTAILS, makeable } from "@/lib/cocktails";
+import { tokensFor } from "@/lib/categories";
 import { inStock } from "@/lib/levels";
 import { EMPTY_PROFILE, type TasteProfile } from "@/lib/taste";
 import type { Bottle } from "@/lib/types";
@@ -77,7 +78,8 @@ export async function POST(request: Request) {
   const profile: TasteProfile = { ...EMPTY_PROFILE, ...(profileRow?.data ?? {}) };
 
   const stocked = bottles.filter((b) => inStock(b.level));
-  const availableCats = new Set(stocked.map((b) => b.category));
+  const availableCats = new Set<string>();
+  for (const b of stocked) tokensFor(b.category).forEach((t) => availableCats.add(t));
   const canMake = COCKTAILS.filter((c) => makeable(c, availableCats));
   const almost = COCKTAILS.filter(
     (c) => c.requires.filter((r) => !availableCats.has(r)).length === 1

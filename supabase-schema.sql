@@ -62,6 +62,9 @@ create trigger trg_bottles_touch before update on public.bottles
 alter table public.bottles alter column user_id set default auth.uid();
 alter table public.parties alter column user_id set default auth.uid();
 
+-- Bottle size (e.g. "750 ml", "1 L"); "Unknown" when not specified.
+alter table public.bottles add column if not exists size text;
+
 -- ┌────────────────────────────────────────────────────────────┐
 -- │  SET YOUR ADMIN EMAIL HERE — the read/write (owner) login.   │
 -- │  Any other confirmed login is a read-only viewer.            │

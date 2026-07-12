@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { COCKTAILS, NEAT_POURS, makeable, missingCount, type Mood } from "@/lib/cocktails";
 import { inStock } from "@/lib/levels";
+import { tokensFor } from "@/lib/categories";
 import { profileIsEmpty, type TasteProfile } from "@/lib/taste";
 import type { Bottle } from "@/lib/types";
 import { Sommelier } from "./Sommelier";
@@ -35,7 +36,7 @@ export function RecommendationsView({
 
   const available = useMemo(() => {
     const s = new Set<string>();
-    for (const b of bottles) if (inStock(b.level)) s.add(b.category);
+    for (const b of bottles) if (inStock(b.level)) tokensFor(b.category).forEach((t) => s.add(t));
     return s;
   }, [bottles]);
 
