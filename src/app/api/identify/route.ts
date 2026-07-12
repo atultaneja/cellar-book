@@ -32,7 +32,7 @@ const SCHEMA = {
           name: { type: "string" },
           brand: { type: ["string", "null"] },
           category: { type: "string", enum: [...CATEGORIES] },
-          guessed_level: { type: ["integer", "null"], enum: [0, 1, 2, 3, 4, 5, null] },
+          guessed_level: { type: ["integer", "null"] },
           confidence: { type: "string", enum: ["high", "medium", "low"] },
         },
         required: ["name", "brand", "category", "guessed_level", "confidence"],

@@ -63,7 +63,8 @@ export function PhotoScan({
       const found: Candidate[] = (json.bottles ?? []).map((b: Omit<Candidate, "include" | "level">) => ({
         ...b,
         include: true,
-        level: b.guessed_level ?? 5,
+        // Clamp to the valid 0–5 range (DB rejects anything outside it).
+        level: Math.min(5, Math.max(0, b.guessed_level ?? 5)),
       }));
       if (found.length === 0) setError("No bottles recognised — try a clearer, closer photo.");
       setCandidates(found);
