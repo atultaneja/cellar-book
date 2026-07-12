@@ -98,10 +98,9 @@ This powers the photo scanner and the sommelier recommendations.
 
    | Name | Value |
    |---|---|
-   | `NEXT_PUBLIC_SUPABASE_URL` | your Supabase **Project URL** |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | your Supabase **anon public** key |
-   | `SUPABASE_SERVICE_ROLE_KEY` | your Supabase **service_role** key |
-   | `NEXT_PUBLIC_SITE_URL` | leave blank for now — you'll set it in step 6 |
+   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase **Project URL** (from the **Data API** page, e.g. `https://xxxx.supabase.co`) |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase **Publishable key** (`sb_publishable_…`) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Supabase **Secret key** (`sb_secret_…`) |
    | `RESEND_API_KEY` | your Resend key (`re_…`) |
    | `RESTOCK_EMAIL_TO` | your email address |
    | `RESTOCK_EMAIL_FROM` | `Tantaan Tiki Bar <onboarding@resend.dev>` |
@@ -113,10 +112,7 @@ This powers the photo scanner and the sommelier recommendations.
    **You should see:** a congratulations screen with a preview of your app.
 
 5. Copy your live address — it looks like `https://cellar-book-xxxx.vercel.app`.
-6. Set the site URL: Vercel → your project → **Settings** → **Environment Variables** →
-   add/edit `NEXT_PUBLIC_SITE_URL` = your live address (no trailing slash). Then go to
-   **Deployments** → the top one → **⋯** → **Redeploy** so it picks up the change.
-7. Tell Supabase to trust your live address for login: Supabase → **Authentication** →
+6. Tell Supabase to trust your live address for login: Supabase → **Authentication** →
    **URL Configuration** → set **Site URL** to your Vercel address, and under
    **Redirect URLs** add `https://YOUR-ADDRESS.vercel.app/auth/callback`. Save.
 
