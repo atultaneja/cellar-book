@@ -64,18 +64,15 @@ export function AppShell({
               <Link
                 key={t.href}
                 href={t.href}
-                className={`py-3 text-center font-body text-sm tracking-wide transition-colors ${
+                aria-current={active ? "page" : undefined}
+                className={`relative py-3 text-center font-body text-sm tracking-wide transition-colors ${
                   active
-                    ? "text-brass-light [text-shadow:0_0_1px_rgba(201,168,94,0.6)]"
-                    : "text-parchment/70 hover:text-parchment"
+                    ? "bg-brass/20 font-bold text-brass-light"
+                    : "text-parchment/60 hover:bg-white/5 hover:text-parchment"
                 }`}
               >
+                {active && <span className="absolute inset-x-0 top-0 h-[3px] bg-brass" />}
                 {t.label}
-                <span
-                  className={`mx-auto mt-1 block h-0.5 w-6 rounded-full ${
-                    active ? "bg-brass" : "bg-transparent"
-                  }`}
-                />
               </Link>
             );
           })}

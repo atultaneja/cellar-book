@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { cocktailById } from "@/lib/cocktails";
+import { CocktailDetail } from "./CocktailDetail";
 
-type Pick = {
+export type Pick = {
   kind: "cocktail" | "neat" | "acquire";
   title: string;
   detail: string;
   cocktail_id: string | null;
 };
 
-type Result = { intro: string; picks: Pick[] };
+export type RecResult = { intro: string; picks: Pick[] };
 
 const KIND_LABEL: Record<Pick["kind"], string> = {
   cocktail: "Cocktail",
@@ -18,11 +19,38 @@ const KIND_LABEL: Record<Pick["kind"], string> = {
   acquire: "Worth acquiring",
 };
 
-export function Sommelier() {
+export function PickCard({ p }: { p: Pick }) {
+  const [open, setOpen] = useState(false);
+  const c = p.cocktail_id ? cocktailById(p.cocktail_id) : undefined;
+  return (
+    <div className="club-card p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="font-display text-lg font-semibold text-racing">{p.title}</h3>
+        <span className="font-body text-[11px] uppercase tracking-widest text-brass-dark">
+          {KIND_LABEL[p.kind]}
+        </span>
+      </div>
+      <p className="mt-1 font-body text-sm text-ink">{p.detail}</p>
+      {c && (
+        <>
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className="mt-2 font-body text-xs font-semibold text-racing underline decoration-brass/50"
+          >
+            {open ? "Hide recipe" : "View full recipe"}
+          </button>
+          {open && <CocktailDetail cocktail={c} />}
+        </>
+      )}
+    </div>
+  );
+}
+
+export function Sommelier({ onResult }: { onResult?: (r: RecResult) => void }) {
   const [occasion, setOccasion] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<Result | null>(null);
+  const [result, setResult] = useState<RecResult | null>(null);
 
   async function ask() {
     setLoading(true);
@@ -35,7 +63,8 @@ export function Sommelier() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "The sommelier is unavailable");
-      setResult(json as Result);
+      setResult(json as RecResult);
+      onResult?.(json as RecResult);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -67,7 +96,8 @@ export function Sommelier() {
           {loading ? "Consulting the cellar…" : "Recommend me something"}
         </button>
         <p className="mt-2 font-body text-xs text-ink-soft">
-          Tuned to your saved taste profile and tonight&rsquo;s stock.
+          Tuned to your saved taste profile and tonight&rsquo;s stock. Saved automatically to
+          &ldquo;Recent&rdquo; below.
         </p>
         {error && <p className="mt-3 font-body text-sm text-oxblood">{error}</p>}
       </div>
@@ -76,25 +106,9 @@ export function Sommelier() {
         <div className="mt-4">
           <p className="mb-3 font-body italic text-ink">{result.intro}</p>
           <div className="grid grid-cols-1 gap-3">
-            {result.picks.map((p, i) => {
-              const c = p.cocktail_id ? cocktailById(p.cocktail_id) : undefined;
-              return (
-                <div key={i} className="club-card p-4">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="font-display text-lg font-semibold text-racing">{p.title}</h3>
-                    <span className="font-body text-[11px] uppercase tracking-widest text-brass-dark">
-                      {KIND_LABEL[p.kind]}
-                    </span>
-                  </div>
-                  <p className="mt-1 font-body text-sm text-ink">{p.detail}</p>
-                  {c && (
-                    <p className="mt-2 border-t border-brass/20 pt-2 font-body text-xs text-ink-soft">
-                      {c.method}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+            {result.picks.map((p, i) => (
+              <PickCard key={i} p={p} />
+            ))}
           </div>
         </div>
       )}

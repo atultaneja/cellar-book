@@ -54,19 +54,28 @@ export function CellarView({
     });
   }, [bottles, query, filter]);
 
-  // Group bottles under their broad family (Whiskey, Gin, Wine, …),
-  // ordered as in FAMILIES; within a family, by category then name.
+  // Group by family (Whiskey, Gin, Wine, …), and within each family by the
+  // specific category (Bourbon, Indian Single Malt, …).
   const grouped = useMemo(() => {
-    const map = new Map<string, Bottle[]>();
+    const fam = new Map<string, Map<string, Bottle[]>>();
     for (const b of filtered) {
-      const fam = familyOf(b.category);
-      if (!map.has(fam)) map.set(fam, []);
-      map.get(fam)!.push(b);
+      const f = familyOf(b.category);
+      if (!fam.has(f)) fam.set(f, new Map());
+      const cats = fam.get(f)!;
+      if (!cats.has(b.category)) cats.set(b.category, []);
+      cats.get(b.category)!.push(b);
     }
-    for (const list of map.values()) {
-      list.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
-    }
-    return FAMILIES.filter((f) => map.has(f)).map((f) => [f, map.get(f)!] as const);
+    return FAMILIES.filter((f) => fam.has(f)).map((f) => {
+      const cats = fam.get(f)!;
+      const categories = Array.from(cats.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([category, list]) => ({
+          category,
+          bottles: [...list].sort((x, y) => x.name.localeCompare(y.name)),
+        }));
+      const count = categories.reduce((n, c) => n + c.bottles.length, 0);
+      return { family: f, count, categories };
+    });
   }, [filtered]);
 
   async function addSingle() {
@@ -274,50 +283,63 @@ export function CellarView({
           </p>
         </div>
       ) : (
-        grouped.map(([family, items]) => (
-          <section key={family} className="mb-5">
+        grouped.map((g) => (
+          <section key={g.family} className="mb-5">
             <div className="mb-2 flex items-center gap-3">
               <h2 className="font-display text-sm font-semibold uppercase tracking-widest text-racing">
-                {family}
+                {g.family}
               </h2>
-              <span className="font-body text-xs text-ink-soft">{items.length}</span>
+              <span className="font-body text-xs text-ink-soft">{g.count}</span>
               <div className="club-rule flex-1" />
             </div>
             <div className="club-card divide-y divide-brass/20">
-              {items.map((b) => (
-                <div key={b.id} className="px-4 py-3">
-                  {editing === b.id ? (
-                    <EditRow
-                      bottle={b}
-                      onSave={saveEdit}
-                      onCancel={() => setEditing(null)}
-                      onDelete={remove}
-                    />
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-body font-semibold text-ink">{b.name}</div>
-                        <div className="truncate font-body text-xs text-ink-soft">
-                          {b.category}
-                          {b.size && b.size !== "Unknown" ? ` · ${b.size}` : ""}
-                          {b.brand ? ` · ${b.brand}` : ""}
-                        </div>
-                      </div>
-                      <LevelPicker
-                        level={b.level}
-                        onChange={(lv) => setLevel(b.id, lv)}
-                        readOnly={!isAdmin}
-                      />
-                      {isAdmin && (
-                        <button
-                          onClick={() => setEditing(b.id)}
-                          className="font-body text-xs text-ink-soft underline decoration-brass/50 hover:text-racing"
-                        >
-                          edit
-                        </button>
-                      )}
+              {g.categories.map((cat) => (
+                <div key={cat.category}>
+                  {g.categories.length > 1 && (
+                    <div className="bg-brass/5 px-4 py-1.5 font-body text-[11px] font-semibold uppercase tracking-widest text-brass-dark">
+                      {cat.category}
                     </div>
                   )}
+                  <div className="divide-y divide-brass/10">
+                    {cat.bottles.map((b) => (
+                      <div key={b.id} className="px-4 py-3">
+                        {editing === b.id ? (
+                          <EditRow
+                            bottle={b}
+                            onSave={saveEdit}
+                            onCancel={() => setEditing(null)}
+                            onDelete={remove}
+                          />
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-body font-semibold text-ink">
+                                {b.name}
+                              </div>
+                              <div className="truncate font-body text-xs text-ink-soft">
+                                {b.category}
+                                {b.size && b.size !== "Unknown" ? ` · ${b.size}` : ""}
+                                {b.brand ? ` · ${b.brand}` : ""}
+                              </div>
+                            </div>
+                            <LevelPicker
+                              level={b.level}
+                              onChange={(lv) => setLevel(b.id, lv)}
+                              readOnly={!isAdmin}
+                            />
+                            {isAdmin && (
+                              <button
+                                onClick={() => setEditing(b.id)}
+                                className="font-body text-xs text-ink-soft underline decoration-brass/50 hover:text-racing"
+                              >
+                                edit
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

@@ -9,14 +9,14 @@ export const dynamic = "force-dynamic";
 export default async function RestockPage() {
   const supabase = createClient();
   const [{ data }, { data: { user } }] = await Promise.all([
-    supabase.from("bottles").select("*").lte("level", 1).order("level").order("category"),
+    supabase.from("bottles").select("*"),
     supabase.auth.getUser(),
   ]);
   const isAdmin = isAdminEmail(user?.email);
 
   return (
     <AppShell isAdmin={isAdmin}>
-      <RestockView initial={(data as Bottle[]) ?? []} isAdmin={isAdmin} />
+      <RestockView bottles={(data as Bottle[]) ?? []} isAdmin={isAdmin} />
     </AppShell>
   );
 }
