@@ -1,8 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-// Central model choice. Opus 4.8 — strong vision (bottle-label reading) and
-// reasoning (the sommelier). Swap here if you ever want a cheaper tier.
-export const MODEL = "claude-opus-4-8";
+// Central model choice. Sonnet 5 — near-Opus vision (bottle-label reading) and
+// reasoning (the sommelier) at roughly half the cost. Swap here to change tiers.
+export const MODEL = "claude-sonnet-5";
 
 export function anthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });

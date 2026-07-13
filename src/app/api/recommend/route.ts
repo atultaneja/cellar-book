@@ -119,11 +119,12 @@ Recommend now.`;
     const client = anthropic();
     const res = await client.messages.create({
       model: MODEL,
-      max_tokens: 4000,
-      thinking: { type: "adaptive" },
+      max_tokens: 2000,
+      // No extended thinking — this is light selection work, not deep reasoning.
+      thinking: { type: "disabled" },
       system: SYSTEM,
       output_config: {
-        effort: "medium",
+        effort: "low",
         format: { type: "json_schema", schema: SCHEMA },
       },
       messages: [{ role: "user", content: userMsg }],
