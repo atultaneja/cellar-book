@@ -68,6 +68,9 @@ alter table public.bottles add column if not exists size text;
 -- Dismissed from the restock list (owner isn't planning to replenish it).
 alter table public.bottles add column if not exists restock_ignore boolean not null default false;
 
+-- Fine-grained remaining volume (ml) for pour-based level estimation.
+alter table public.bottles add column if not exists remaining_ml integer;
+
 -- ┌────────────────────────────────────────────────────────────┐
 -- │  SET YOUR ADMIN EMAIL HERE — the read/write (owner) login.   │
 -- │  Any other confirmed login is a read-only viewer.            │
@@ -236,3 +239,26 @@ alter table public.ai_recommendations enable row level security;
 drop policy if exists "own recommendations" on public.ai_recommendations;
 create policy "own recommendations" on public.ai_recommendations
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+--  DRINK LOG — pours recorded to keep levels fresh & feed the dashboard.
+--  Shared across the bar (read by all signed-in); only the admin writes.
+-- ============================================================
+create table if not exists public.drink_log (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  bottle_id    uuid references public.bottles (id) on delete set null,
+  bottle_name  text,               -- snapshot so history survives bottle deletion
+  category     text,
+  volume_ml    integer,
+  note         text,
+  created_at   timestamptz not null default now()
+);
+
+alter table public.drink_log enable row level security;
+drop policy if exists "read drink_log" on public.drink_log;
+drop policy if exists "admin writes drink_log" on public.drink_log;
+create policy "read drink_log" on public.drink_log
+  for select using (auth.uid() is not null);
+create policy "admin writes drink_log" on public.drink_log
+  for all using (public.is_admin()) with check (public.is_admin());

@@ -6,6 +6,7 @@ export type Bottle = {
   category: string;
   size: string | null; // e.g. "750 ml", "1 L", "Unknown"
   level: number; // 0..5
+  remaining_ml?: number | null; // fine-grained volume for pour tracking
   restock_ignore?: boolean; // dismissed from the restock list
   notes: string | null;
   created_at: string;

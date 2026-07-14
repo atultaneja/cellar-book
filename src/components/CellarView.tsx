@@ -3,12 +3,13 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CATEGORIES, FAMILIES, familyOf } from "@/lib/categories";
-import { inStock } from "@/lib/levels";
-import { SIZE_OPTIONS, DEFAULT_SIZE } from "@/lib/sizes";
+import { inStock, mlForLevel, levelForMl } from "@/lib/levels";
+import { SIZE_OPTIONS, DEFAULT_SIZE, sizeToMl } from "@/lib/sizes";
 import type { Bottle } from "@/lib/types";
 import { CategorySelect } from "./CategorySelect";
 import { LevelPicker } from "./LevelPicker";
 import { PhotoScan } from "./PhotoScan";
+import { PourControl } from "./PourControl";
 
 type Draft = { name: string; brand: string; category: string; size: string; level: number };
 
@@ -131,8 +132,37 @@ export function CellarView({
   }
 
   async function setLevel(id: string, level: number) {
-    setBottles((prev) => prev.map((b) => (b.id === id ? { ...b, level } : b)));
-    await supabase.from("bottles").update({ level }).eq("id", id);
+    // Manually setting a level reconciles the fine-grained ml estimate.
+    const b = bottles.find((x) => x.id === id);
+    const sizeMl = b ? sizeToMl(b.size) : null;
+    const patch: Partial<Bottle> =
+      sizeMl != null ? { level, remaining_ml: mlForLevel(level, sizeMl) } : { level };
+    setBottles((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+    await supabase.from("bottles").update(patch).eq("id", id);
+  }
+
+  // Record a pour: log it (for the dashboard) and, when size is known,
+  // subtract the volume and re-estimate the coarse level.
+  async function logPour(bottle: Bottle, ml: number) {
+    const sizeMl = sizeToMl(bottle.size);
+    if (sizeMl != null) {
+      const currentMl = bottle.remaining_ml ?? mlForLevel(bottle.level, sizeMl);
+      const newMl = Math.max(0, currentMl - ml);
+      const newLevel = levelForMl(newMl, sizeMl);
+      setBottles((prev) =>
+        prev.map((x) => (x.id === bottle.id ? { ...x, remaining_ml: newMl, level: newLevel } : x))
+      );
+      await supabase
+        .from("bottles")
+        .update({ remaining_ml: newMl, level: newLevel })
+        .eq("id", bottle.id);
+    }
+    await supabase.from("drink_log").insert({
+      bottle_id: bottle.id,
+      bottle_name: bottle.name,
+      category: bottle.category,
+      volume_ml: ml,
+    });
   }
 
   async function saveEdit(id: string, patch: Partial<Bottle>) {
@@ -327,6 +357,7 @@ export function CellarView({
                               onChange={(lv) => setLevel(b.id, lv)}
                               readOnly={!isAdmin}
                             />
+                            {isAdmin && <PourControl onPour={(ml) => logPour(b, ml)} />}
                             {isAdmin && (
                               <button
                                 onClick={() => setEditing(b.id)}

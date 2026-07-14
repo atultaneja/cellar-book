@@ -121,7 +121,11 @@ export async function GET(request: Request) {
         <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#C9A85E;">Tantaan Tiki Bar</div>
         <div style="font-size:22px;font-weight:bold;">Your Weekly Dispatch</div>
       </div>
-      <div style="padding:22px 24px;">${restockSection}${pickSection}</div>
+      <div style="padding:22px 24px;">${restockSection}${pickSection}
+        <p style="margin:18px 0 0;font-size:12px;color:#8A6D34;font-style:italic;">
+          Tip: log your pours to keep levels honest, and glance over the bar now and then to catch any drift.
+        </p>
+      </div>
     </div>
   </div>`;
 

@@ -24,3 +24,20 @@ export function needsRestock(level: number) {
 export function inStock(level: number) {
   return level >= 2;
 }
+
+// Estimated ml for a coarse level, given the bottle's total size.
+export function mlForLevel(level: number, sizeMl: number): number {
+  return Math.round((levelMeta(level).pct / 100) * sizeMl);
+}
+
+// Map a remaining ml back to the nearest coarse level (bucket midpoints).
+export function levelForMl(remainingMl: number, sizeMl: number): number {
+  if (sizeMl <= 0) return 0;
+  const pct = (Math.max(0, remainingMl) / sizeMl) * 100;
+  if (pct >= 87.5) return 5;
+  if (pct >= 62.5) return 4;
+  if (pct >= 37.5) return 3;
+  if (pct >= 17.5) return 2;
+  if (pct > 2.5) return 1;
+  return 0;
+}

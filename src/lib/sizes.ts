@@ -26,3 +26,14 @@ export function normalizeSize(value: string | null | undefined): BottleSize {
   const hit = SIZE_OPTIONS.find((s) => s.toLowerCase() === value.toLowerCase().trim());
   return hit ?? DEFAULT_SIZE;
 }
+
+// Total millilitres for a size label, or null when unknown/unparseable.
+export function sizeToMl(size: string | null | undefined): number | null {
+  if (!size) return null;
+  const s = size.toLowerCase().trim();
+  const ml = s.match(/^([\d.]+)\s*ml$/);
+  if (ml) return Math.round(parseFloat(ml[1]));
+  const l = s.match(/^([\d.]+)\s*l$/);
+  if (l) return Math.round(parseFloat(l[1]) * 1000);
+  return null; // "Unknown", "Other", etc.
+}

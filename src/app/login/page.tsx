@@ -23,7 +23,7 @@ export default function LoginPage() {
       setError(error.message);
       return;
     }
-    router.push("/cellar");
+    router.push("/home");
     router.refresh();
   }
 

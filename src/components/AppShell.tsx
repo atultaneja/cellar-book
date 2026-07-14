@@ -6,9 +6,10 @@ import { Crest } from "./Crest";
 import { createClient } from "@/lib/supabase/client";
 
 const ALL_TABS = [
+  { href: "/home", label: "Home", adminOnly: false },
   { href: "/cellar", label: "Cellar", adminOnly: false },
   { href: "/restock", label: "Restock", adminOnly: false },
-  { href: "/recommendations", label: "Recommend", adminOnly: false },
+  { href: "/recommendations", label: "Recs", adminOnly: false },
   { href: "/party", label: "Party", adminOnly: true },
 ];
 
@@ -34,7 +35,7 @@ export function AppShell({
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 pb-24">
       <header className="pt-6">
         <div className="flex items-center justify-between">
-          <Link href="/cellar" className="flex items-center gap-3">
+          <Link href="/home" className="flex items-center gap-3">
             <Crest size={40} />
             <div className="leading-tight">
               <div className="font-display text-xl font-bold text-racing">Tantaan Tiki Bar</div>
