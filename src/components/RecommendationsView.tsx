@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { COCKTAILS, NEAT_POURS, makeable, missingCount, type Cocktail, type Mood } from "@/lib/cocktails";
 import { inStock } from "@/lib/levels";
 import { tokensFor, familyOf, FAMILIES } from "@/lib/categories";
@@ -35,10 +36,31 @@ export function RecommendationsView({
   aiEnabled: boolean;
   isAdmin: boolean;
 }) {
+  const router = useRouter();
   const [mood, setMood] = useState<Mood | "All">("All");
   const [profile, setProfile] = useState<TasteProfile>(initialProfile);
   const [editingProfile, setEditingProfile] = useState(false);
   const [recent, setRecent] = useState<RecentRec[]>(initialRecent);
+  const [toast, setToast] = useState<string | null>(null);
+
+  // "I'm drinking this" — log the pour(s) server-side, then refresh levels.
+  async function consume(body: { cocktailId?: string; type?: string; token?: string }) {
+    try {
+      const res = await fetch("/api/consume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Couldn't log that");
+      const names = (json.deducted as string[]) ?? [];
+      setToast(names.length ? `Logged — poured from ${names.join(", ")}.` : "Logged.");
+      router.refresh();
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : "Something went wrong");
+    }
+    setTimeout(() => setToast(null), 3500);
+  }
 
   const available = useMemo(() => {
     const s = new Set<string>();
@@ -90,6 +112,12 @@ export function RecommendationsView({
         Drawn entirely from what stands in good supply tonight.
       </p>
 
+      {toast && (
+        <div className="club-card mb-4 border-racing/40 bg-racing/10 p-3 text-center font-body text-sm text-racing">
+          {toast}
+        </div>
+      )}
+
       {/* AI section — only when a Claude key is configured */}
       {aiEnabled && (
         <>
@@ -120,6 +148,8 @@ export function RecommendationsView({
             ))}
 
           <Sommelier
+            canAccept={isAdmin}
+            onAccept={consume}
             onResult={(r) =>
               setRecent((prev) =>
                 [{ id: `live-${prev.length}`, result: r, created_at: "" }, ...prev].slice(0, 12)
@@ -173,7 +203,11 @@ export function RecommendationsView({
         ) : (
           <div className="grid grid-cols-1 gap-3">
             {canMake.map((c) => (
-              <MakeableCard key={c.id} c={c} />
+              <MakeableCard
+                key={c.id}
+                c={c}
+                onAccept={isAdmin ? () => consume({ cocktailId: c.id }) : undefined}
+              />
             ))}
           </div>
         )}
@@ -193,6 +227,14 @@ export function RecommendationsView({
                   </span>
                 </div>
                 <p className="font-body text-sm text-ink-soft">{v.note}</p>
+                {isAdmin && (
+                  <button
+                    onClick={() => consume({ type: "neat", token: cat })}
+                    className="club-btn-ghost mt-2 !py-1 text-xs"
+                  >
+                    🥃 I&rsquo;m pouring this
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -251,8 +293,9 @@ export function RecommendationsView({
   );
 }
 
-function MakeableCard({ c }: { c: Cocktail }) {
+function MakeableCard({ c, onAccept }: { c: Cocktail; onAccept?: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   return (
     <div className="club-card p-4">
       <button className="flex w-full items-baseline justify-between gap-2 text-left" onClick={() => setOpen((o) => !o)}>
@@ -262,6 +305,19 @@ function MakeableCard({ c }: { c: Cocktail }) {
         </span>
       </button>
       <p className="mt-1 font-body text-sm text-ink">{c.method}</p>
+      {onAccept && (
+        <button
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            await onAccept();
+            setBusy(false);
+          }}
+          className="club-btn-ghost mt-2 !py-1 text-xs"
+        >
+          {busy ? "Logging…" : "🍸 I'm drinking this"}
+        </button>
+      )}
       {open && <CocktailDetail cocktail={c} />}
     </div>
   );

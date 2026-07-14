@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CATEGORIES, FAMILIES, familyOf } from "@/lib/categories";
-import { inStock, mlForLevel, levelForMl } from "@/lib/levels";
+import { inStock, mlForLevel, levelForMl, levelMeta } from "@/lib/levels";
 import { SIZE_OPTIONS, DEFAULT_SIZE, sizeToMl } from "@/lib/sizes";
 import type { Bottle } from "@/lib/types";
 import { CategorySelect } from "./CategorySelect";
@@ -41,6 +41,33 @@ export function CellarView({
   const [editing, setEditing] = useState<string | null>(null);
 
   const inStockCount = bottles.filter((b) => inStock(b.level)).length;
+
+  // Download the whole inventory as a CSV backup (client-side, no server needed).
+  function exportCsv() {
+    const cell = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const header = ["Name", "Brand", "Category", "Family", "Size", "Level", "Remaining ml", "Added"];
+    const rows = bottles.map((b) => [
+      b.name,
+      b.brand ?? "",
+      b.category,
+      familyOf(b.category),
+      b.size ?? "",
+      levelMeta(b.level).label,
+      b.remaining_ml ?? "",
+      b.created_at,
+    ]);
+    const csv = [header, ...rows].map((r) => r.map(cell).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tantaan-tiki-bar-inventory-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -179,13 +206,18 @@ export function CellarView({
   return (
     <div>
       {/* Summary */}
-      <div className="mb-5 flex items-end justify-between">
+      <div className="mb-5 flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-racing">The Cellar</h1>
           <p className="font-body text-sm text-ink-soft">
             {bottles.length} bottles catalogued · {inStockCount} in good supply
           </p>
         </div>
+        {isAdmin && bottles.length > 0 && (
+          <button className="club-btn-ghost !py-1.5 text-xs" onClick={exportCsv}>
+            ⬇ Export
+          </button>
+        )}
       </div>
 
       {/* Controls — admin only */}

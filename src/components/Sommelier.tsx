@@ -19,8 +19,9 @@ const KIND_LABEL: Record<Pick["kind"], string> = {
   acquire: "Worth acquiring",
 };
 
-export function PickCard({ p }: { p: Pick }) {
+export function PickCard({ p, onAccept }: { p: Pick; onAccept?: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const c = p.cocktail_id ? cocktailById(p.cocktail_id) : undefined;
   return (
     <div className="club-card p-4">
@@ -31,22 +32,43 @@ export function PickCard({ p }: { p: Pick }) {
         </span>
       </div>
       <p className="mt-1 font-body text-sm text-ink">{p.detail}</p>
-      {c && (
-        <>
+      <div className="mt-2 flex items-center gap-4">
+        {c && (
           <button
             onClick={() => setOpen((o) => !o)}
-            className="mt-2 font-body text-xs font-semibold text-racing underline decoration-brass/50"
+            className="font-body text-xs font-semibold text-racing underline decoration-brass/50"
           >
             {open ? "Hide recipe" : "View full recipe"}
           </button>
-          {open && <CocktailDetail cocktail={c} />}
-        </>
-      )}
+        )}
+        {onAccept && (
+          <button
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              await onAccept();
+              setBusy(false);
+            }}
+            className="club-btn-ghost !py-1 text-xs"
+          >
+            {busy ? "Logging…" : "🍸 I'm drinking this"}
+          </button>
+        )}
+      </div>
+      {open && c && <CocktailDetail cocktail={c} />}
     </div>
   );
 }
 
-export function Sommelier({ onResult }: { onResult?: (r: RecResult) => void }) {
+export function Sommelier({
+  onResult,
+  canAccept,
+  onAccept,
+}: {
+  onResult?: (r: RecResult) => void;
+  canAccept?: boolean;
+  onAccept?: (body: { cocktailId?: string; type?: string; token?: string }) => Promise<void>;
+}) {
   const [occasion, setOccasion] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +129,15 @@ export function Sommelier({ onResult }: { onResult?: (r: RecResult) => void }) {
           <p className="mb-3 font-body italic text-ink">{result.intro}</p>
           <div className="grid grid-cols-1 gap-3">
             {result.picks.map((p, i) => (
-              <PickCard key={i} p={p} />
+              <PickCard
+                key={i}
+                p={p}
+                onAccept={
+                  canAccept && onAccept && p.cocktail_id
+                    ? () => onAccept({ cocktailId: p.cocktail_id! })
+                    : undefined
+                }
+              />
             ))}
           </div>
         </div>
