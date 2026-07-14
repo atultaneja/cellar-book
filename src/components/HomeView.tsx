@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Crest } from "./Crest";
+import { Gallery } from "./Gallery";
 import { familyOf, FAMILIES } from "@/lib/categories";
 import { inStock, needsRestock } from "@/lib/levels";
 import type { Bottle } from "@/lib/types";
@@ -101,6 +102,12 @@ export function HomeView({
           </div>
         </div>
       </div>
+
+      {/* The bar, in pictures */}
+      <section className="mb-6">
+        <Head label="The Bar" />
+        <Gallery />
+      </section>
 
       {/* Stat tiles */}
       <div className="mb-6 grid grid-cols-3 gap-2">
