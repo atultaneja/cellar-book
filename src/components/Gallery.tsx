@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 const IMAGES = [
-  { src: "/gallery/bar-4.jpg", caption: "The main bar" },
-  { src: "/gallery/bar-1.jpg", caption: "Spirits & glassware" },
-  { src: "/gallery/bar-2.jpg", caption: "The library bar" },
-  { src: "/gallery/bar-3.jpg", caption: "The collection" },
+  { src: "/gallery/bar-4.jpg", caption: "The main bar", top: false },
+  { src: "/gallery/bar-1.jpg", caption: "Spirits & glassware", top: false },
+  { src: "/gallery/bar-2.jpg", caption: "The library bar", top: true },
+  { src: "/gallery/bar-3.jpg", caption: "The collection", top: true },
 ];
 
 export function Gallery() {
@@ -26,7 +26,9 @@ export function Gallery() {
               src={im.src}
               alt={im.caption}
               loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+                im.top ? "object-top" : "object-center"
+              }`}
             />
             <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-racing-deep/85 to-transparent px-2 py-1.5 text-left font-body text-xs text-parchment">
               {im.caption}
