@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { anthropic, MODEL, parseJsonResponse } from "@/lib/ai";
+import { anthropic, MODEL_SOMMELIER, parseJsonResponse } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
 import { COCKTAILS, makeable } from "@/lib/cocktails";
 import { tokensFor } from "@/lib/categories";
@@ -43,13 +43,27 @@ const SCHEMA = {
   required: ["intro", "picks"],
 } as const;
 
-const SYSTEM = `You are the resident mixologist at the Tantaan Tiki Bar, Karishma & Atul's home bar —
-erudite, warm, economical with words. You recommend drinks strictly from what the member has in stock tonight,
-tuned to their stated palate. Prefer cocktails from the provided "makeable" list (reference the
-exact cocktail_id). You may also suggest a neat/on-the-rocks pour of a spirit in stock (kind:"neat",
-cocktail_id null), and at most one bottle worth acquiring next (kind:"acquire", cocktail_id null),
-chosen to fit their taste and unlock drinks they can nearly make. Give 3–5 picks total. Keep each
-"detail" to one or two elegant sentences. Never recommend something not supported by the inventory.`;
+const SYSTEM = `You are the mixologist at the Tantaan Tiki Bar — imaginative, well-travelled, and
+genuinely responsive to the moment. Read the member's occasion and mood first, then their palate,
+and suggest drinks that fit THAT specific brief — using only spirits currently in stock.
+
+Rules:
+- Anchor every pick to tonight's occasion/mood. Your "intro" must show you actually understood the
+  request (reference it), not a generic greeting.
+- Range widely across the whole world of drinks — classics, modern, regional, tiki, lesser-known —
+  not a fixed shortlist. You are ENCOURAGED to suggest drinks beyond the CANON list below, as long as
+  every ingredient's base spirit is in the in-stock list. Vary your picks each time; never fall back
+  to the same two or three drinks.
+- For a cocktail (kind:"cocktail"): if it exactly matches a CANON entry, put its cocktail_id so the app
+  can show the full recipe; otherwise set cocktail_id:null and include a short build in "detail"
+  (key spirits + rough proportions + one line on why it fits tonight).
+- Optionally include one neat/on-the-rocks pour (kind:"neat", cocktail_id:null) and at most one bottle
+  worth acquiring (kind:"acquire", cocktail_id:null) with a reason.
+- Give 4–6 picks with real variety, including at least one adventurous or unexpected choice that still
+  fits the brief.
+- Use only spirits that appear in the in-stock list. Never invent bottles.
+- Avoid repeating anything in "RECENTLY SUGGESTED" unless it is clearly the single best fit.
+- Keep each "detail" to 1–3 vivid, useful sentences.`;
 
 export async function POST(request: Request) {
   const supabase = createClient();
@@ -68,11 +82,25 @@ export async function POST(request: Request) {
     // no body is fine
   }
 
-  const [{ data: bottleRows }, { data: profileRow }] = await Promise.all([
+  const [{ data: bottleRows }, { data: profileRow }, { data: recentRows }] = await Promise.all([
     supabase.from("bottles").select("*"),
     // Shared bar profile (one row); readable by admin and viewers alike.
     supabase.from("taste_profiles").select("data").limit(1).maybeSingle(),
+    supabase
+      .from("ai_recommendations")
+      .select("result")
+      .order("created_at", { ascending: false })
+      .limit(6),
   ]);
+
+  // Titles suggested recently, so the sommelier can deliberately vary from them.
+  const recentTitles = Array.from(
+    new Set(
+      ((recentRows as { result: Recommendation }[]) ?? [])
+        .flatMap((r) => (r.result?.picks ?? []).map((p) => p.title))
+        .filter(Boolean)
+    )
+  ).slice(0, 20);
 
   const bottles = (bottleRows as Bottle[]) ?? [];
   const profile: TasteProfile = { ...EMPTY_PROFILE, ...(profileRow?.data ?? {}) };
@@ -99,32 +127,36 @@ export async function POST(request: Request) {
 
   const profileText = JSON.stringify(profile);
 
-  const userMsg = `MEMBER'S PALATE (their saved taste profile):
+  const userMsg = `TONIGHT'S REQUEST (this is the brief — center everything on it):
+${occasion || "(none given — surprise me with something suited to a relaxed evening)"}
+
+MEMBER'S PALATE (saved taste profile):
 ${profileText}
 
-TONIGHT'S REQUEST: ${occasion || "(none given — recommend for a typical evening)"}
-
-BOTTLES IN STOCK:
+SPIRITS & BOTTLES IN STOCK (you may build anything whose base spirits are here):
 ${inventoryText}
 
-COCKTAILS FULLY MAKEABLE NOW (use these cocktail_ids for kind:"cocktail"):
+CANON — known recipes you can reference by cocktail_id (NOT an exhaustive menu; feel free to go beyond):
 ${makeableText || "(none)"}
 
-ONE BOTTLE SHORT (for kind:"acquire" ideas):
+BOTTLES ONE SHORT (ideas for a kind:"acquire" pick):
 ${almostText || "(none)"}
 
-Recommend now.`;
+RECENTLY SUGGESTED — vary away from these unless one is truly the best fit:
+${recentTitles.length ? recentTitles.join(", ") : "(nothing yet)"}
+
+Now craft tonight's recommendations.`;
 
   try {
     const client = anthropic();
     const res = await client.messages.create({
-      model: MODEL,
-      max_tokens: 2000,
-      // No extended thinking — this is light selection work, not deep reasoning.
-      thinking: { type: "disabled" },
+      model: MODEL_SOMMELIER,
+      max_tokens: 4000,
+      // Think it through — read the occasion, range widely, avoid repeats.
+      thinking: { type: "adaptive" },
       system: SYSTEM,
       output_config: {
-        effort: "low",
+        effort: "high",
         format: { type: "json_schema", schema: SCHEMA },
       },
       messages: [{ role: "user", content: userMsg }],

@@ -40,18 +40,17 @@ function timeAgo(iso: string): string {
 export function HomeView({
   bottles,
   pours,
+  poursThisWeek,
   isAdmin,
 }: {
   bottles: Bottle[];
   pours: Pour[];
+  poursThisWeek: number;
   isAdmin: boolean;
 }) {
   const total = bottles.length;
   const good = bottles.filter((b) => inStock(b.level)).length;
   const low = bottles.filter((b) => needsRestock(b.level) && !b.restock_ignore).length;
-
-  const weekAgo = Date.now() - 7 * 86_400_000;
-  const poursThisWeek = pours.filter((p) => new Date(p.created_at).getTime() >= weekAgo).length;
 
   const famCounts = FAMILIES.map((f) => ({
     family: f,
@@ -191,6 +190,12 @@ export function HomeView({
                 </div>
               ))}
             </div>
+            <Link
+              href="/history"
+              className="mt-2 inline-block font-body text-xs font-semibold text-racing underline decoration-brass/50"
+            >
+              View full pour history →
+            </Link>
           </>
         )}
       </section>

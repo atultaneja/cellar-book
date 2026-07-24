@@ -1,8 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-// Central model choice. Sonnet 5 — near-Opus vision (bottle-label reading) and
-// reasoning (the sommelier) at roughly half the cost. Swap here to change tiers.
+// Vision + light background tasks: Sonnet 5 (strong label reading, cheap).
 export const MODEL = "claude-sonnet-5";
+
+// The interactive sommelier: top model + thinking, for creative, occasion-aware
+// picks. It's used occasionally, so the extra cost is a few cents at most.
+export const MODEL_SOMMELIER = "claude-opus-4-8";
 
 export function anthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
