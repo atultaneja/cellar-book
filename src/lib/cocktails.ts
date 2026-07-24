@@ -1,3 +1,11 @@
+// A renderable recipe — shared by the built-in canon and sommelier-invented drinks.
+export type Recipe = {
+  ingredients: string[];
+  steps: string[];
+  glass: string;
+  garnish?: string | null;
+};
+
 export type Mood =
   | "Aperitif"
   | "Nightcap"

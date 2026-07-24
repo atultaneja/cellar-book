@@ -17,6 +17,7 @@ type Recommendation = {
     title: string;
     detail: string;
     cocktail_id: string | null;
+    recipe: { ingredients: string[]; steps: string[]; glass: string; garnish: string | null };
   }[];
 };
 
@@ -35,8 +36,19 @@ const SCHEMA = {
           title: { type: "string" },
           detail: { type: "string" },
           cocktail_id: { type: ["string", "null"] },
+          recipe: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              ingredients: { type: "array", items: { type: "string" } },
+              steps: { type: "array", items: { type: "string" } },
+              glass: { type: "string" },
+              garnish: { type: ["string", "null"] },
+            },
+            required: ["ingredients", "steps", "glass", "garnish"],
+          },
         },
-        required: ["kind", "title", "detail", "cocktail_id"],
+        required: ["kind", "title", "detail", "cocktail_id", "recipe"],
       },
     },
   },
@@ -63,7 +75,11 @@ Rules:
   fits the brief.
 - Use only spirits that appear in the in-stock list. Never invent bottles.
 - Avoid repeating anything in "RECENTLY SUGGESTED" unless it is clearly the single best fit.
-- Keep each "detail" to 1–3 vivid, useful sentences.`;
+- Keep each "detail" to 1–3 vivid, useful sentences.
+- For EVERY kind:"cocktail" pick, fill "recipe" with a real, complete recipe: "ingredients" as
+  lines that include measures (e.g. "45 ml gin", "15 ml lime juice", "2 dashes Angostura"), ordered
+  "steps", a "glass", and a "garnish" (or null). This is required even for drinks not in the CANON.
+- For kind:"neat" and kind:"acquire", set recipe to {ingredients:[], steps:[], glass:"", garnish:null}.`;
 
 export async function POST(request: Request) {
   const supabase = createClient();

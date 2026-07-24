@@ -318,7 +318,7 @@ function MakeableCard({ c, onAccept }: { c: Cocktail; onAccept?: () => Promise<v
           {busy ? "Logging…" : "🍸 I'm drinking this"}
         </button>
       )}
-      {open && <CocktailDetail cocktail={c} />}
+      {open && <CocktailDetail recipe={c} />}
     </div>
   );
 }

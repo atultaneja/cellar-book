@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { cocktailById } from "@/lib/cocktails";
+import { cocktailById, type Recipe } from "@/lib/cocktails";
 import { CocktailDetail } from "./CocktailDetail";
 
 export type Pick = {
@@ -9,6 +9,7 @@ export type Pick = {
   title: string;
   detail: string;
   cocktail_id: string | null;
+  recipe?: Recipe | null;
 };
 
 export type RecResult = { intro: string; picks: Pick[] };
@@ -22,7 +23,10 @@ const KIND_LABEL: Record<Pick["kind"], string> = {
 export function PickCard({ p, onAccept }: { p: Pick; onAccept?: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const c = p.cocktail_id ? cocktailById(p.cocktail_id) : undefined;
+  // Recipe from the built-in canon if it matches, else the one the sommelier wrote.
+  const canon = p.cocktail_id ? cocktailById(p.cocktail_id) : undefined;
+  const recipe: Recipe | undefined =
+    canon ?? (p.recipe && p.recipe.ingredients?.length ? p.recipe : undefined);
   return (
     <div className="club-card p-4">
       <div className="flex items-baseline justify-between gap-2">
@@ -33,7 +37,7 @@ export function PickCard({ p, onAccept }: { p: Pick; onAccept?: () => Promise<vo
       </div>
       <p className="mt-1 font-body text-sm text-ink">{p.detail}</p>
       <div className="mt-2 flex items-center gap-4">
-        {c && (
+        {recipe && (
           <button
             onClick={() => setOpen((o) => !o)}
             className="font-body text-xs font-semibold text-racing underline decoration-brass/50"
@@ -55,7 +59,7 @@ export function PickCard({ p, onAccept }: { p: Pick; onAccept?: () => Promise<vo
           </button>
         )}
       </div>
-      {open && c && <CocktailDetail cocktail={c} />}
+      {open && recipe && <CocktailDetail recipe={recipe} />}
     </div>
   );
 }
