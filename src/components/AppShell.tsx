@@ -44,9 +44,19 @@ export function AppShell({
               </div>
             </div>
           </Link>
-          <button onClick={signOut} className="club-btn-ghost !px-3 !py-1.5 text-xs">
-            Sign out
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            <button onClick={signOut} className="club-btn-ghost !px-3 !py-1.5 text-xs">
+              Sign out
+            </button>
+            <div className="font-body text-[11px] tracking-wide text-ink-soft">
+              {new Date().toLocaleDateString(undefined, {
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </div>
+          </div>
         </div>
         <div className="club-rule mt-4" />
       </header>
