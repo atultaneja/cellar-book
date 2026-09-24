@@ -4,16 +4,10 @@ import { MaltAdvisorView } from "@/components/MaltAdvisorView";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/isAdmin";
 import type { MaltAdvice, Source } from "@/app/api/malt-advisor/route";
+import { isMalt } from "@/lib/whisky";
 import type { Bottle } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-const MALT_CATEGORIES = new Set([
-  "Single Malt Scotch",
-  "Blended Malt Scotch",
-  "Japanese Whisky",
-  "Indian Single Malt",
-]);
 
 export default async function MaltPage() {
   const supabase = createClient();
@@ -25,7 +19,7 @@ export default async function MaltPage() {
   if (!isAdminEmail(user?.email)) redirect("/cellar");
 
   const [{ data: bottles }, { data: lastRec }] = await Promise.all([
-    supabase.from("bottles").select("category"),
+    supabase.from("bottles").select("*").order("category").order("name"),
     supabase
       .from("ai_recommendations")
       .select("result, created_at")
@@ -35,9 +29,7 @@ export default async function MaltPage() {
       .maybeSingle(),
   ]);
 
-  const maltCount = ((bottles as Pick<Bottle, "category">[]) ?? []).filter((b) =>
-    MALT_CATEGORIES.has(b.category)
-  ).length;
+  const malts = ((bottles as Bottle[]) ?? []).filter((b) => isMalt(b.category));
 
   const saved = (lastRec?.result as { advice?: MaltAdvice; sources?: Source[] } | null) ?? null;
 
@@ -45,7 +37,7 @@ export default async function MaltPage() {
     <AppShell isAdmin>
       <MaltAdvisorView
         aiEnabled={!!process.env.ANTHROPIC_API_KEY}
-        maltCount={maltCount}
+        malts={malts}
         initialAdvice={saved?.advice ?? null}
         initialSources={saved?.sources ?? []}
         lastUpdated={lastRec?.created_at ?? null}

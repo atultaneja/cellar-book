@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { MaltAdvice, AcquirePick, WatchPick, Source } from "@/app/api/malt-advisor/route";
+import { MaltDashboard } from "./MaltDashboard";
+import type { Bottle } from "@/lib/types";
 
 const PRIORITY_LABEL: Record<AcquirePick["priority"], string> = {
   now: "Buy now",
@@ -17,17 +19,18 @@ const PRIORITY_CLASS: Record<AcquirePick["priority"], string> = {
 
 export function MaltAdvisorView({
   aiEnabled,
-  maltCount,
+  malts,
   initialAdvice,
   initialSources,
   lastUpdated,
 }: {
   aiEnabled: boolean;
-  maltCount: number;
+  malts: Bottle[];
   initialAdvice: MaltAdvice | null;
   initialSources: Source[];
   lastUpdated: string | null;
 }) {
+  const maltCount = malts.length;
   const [focus, setFocus] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,11 +61,14 @@ export function MaltAdvisorView({
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-racing">The Malt Advisor</h1>
+      <h1 className="font-display text-2xl font-bold text-racing">Your Single Malts</h1>
       <p className="mb-4 font-body text-sm text-ink-soft">
-        A strategic buyer for your single-malt collection — grounded in what&rsquo;s releasing and
-        hot right now.
+        The collection at a glance — sliced by region, type, cask and age — with a strategic buyer
+        on call below.
       </p>
+
+      {/* The collection dashboard — always the default view */}
+      <MaltDashboard malts={malts} />
 
       {!aiEnabled ? (
         <div className="club-card p-6 text-center">
@@ -72,13 +78,20 @@ export function MaltAdvisorView({
         </div>
       ) : (
         <>
+          <div className="mb-3 flex items-center gap-3">
+            <h2 className="font-display text-sm font-semibold uppercase tracking-widest text-racing">
+              Ask the Malt Advisor
+            </h2>
+            <div className="club-rule flex-1" />
+          </div>
+
           <div className="club-card mb-5 p-4">
             <label className="club-label">
-              Anything to steer this plan? <span className="text-ink-soft">(optional)</span>
+              What are you after? <span className="text-ink-soft">(optional)</span>
             </label>
             <input
               className="club-input"
-              placeholder="e.g. budget ≤ ₹10k · lean into Islay · a special bottle for a birthday"
+              placeholder="e.g. budget ≤ ₹10k · fill my Islay gap · a special bottle for a birthday"
               value={focus}
               onChange={(e) => setFocus(e.target.value)}
               onKeyDown={(e) => {
@@ -89,8 +102,8 @@ export function MaltAdvisorView({
               {loading ? "Consulting the market…" : "Build my acquisition plan"}
             </button>
             <p className="mt-2 font-body text-xs text-ink-soft">
-              Reads your {maltCount} malt{maltCount === 1 ? "" : "s"} in the cellar and searches the
-              latest releases. Takes a few seconds.
+              Reads your {maltCount} malt{maltCount === 1 ? "" : "s"} above and searches the latest
+              releases to fill the gaps. Takes a few seconds.
             </p>
             {error && <p className="mt-3 font-body text-sm text-oxblood">{error}</p>}
           </div>
