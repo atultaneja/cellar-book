@@ -10,6 +10,7 @@ const ALL_TABS = [
   { href: "/cellar", label: "Cellar", adminOnly: false },
   { href: "/restock", label: "Restock", adminOnly: false },
   { href: "/recommendations", label: "Recs", adminOnly: false },
+  { href: "/malt", label: "Malt", adminOnly: true },
   { href: "/party", label: "Party", adminOnly: true },
 ];
 

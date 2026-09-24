@@ -35,6 +35,7 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/cellar") ||
     path.startsWith("/restock") ||
     path.startsWith("/recommendations") ||
+    path.startsWith("/malt") ||
     path.startsWith("/party");
 
   if (isPrivate && !user) {
