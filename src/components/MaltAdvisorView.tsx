@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { MaltAdvice, AcquirePick, WatchPick, Source } from "@/app/api/malt-advisor/route";
+import type { MaltAdvice, AcquirePick, WatchPick, Source } from "@/lib/malt";
 import { MaltDashboard } from "./MaltDashboard";
 import type { Overrides } from "@/lib/whisky";
 import type { Bottle } from "@/lib/types";
@@ -36,41 +36,61 @@ export function MaltAdvisorView({
   const maltCount = malts.length;
   const [focus, setFocus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [phase, setPhase] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [advice, setAdvice] = useState<MaltAdvice | null>(initialAdvice);
   const [sources, setSources] = useState<Source[]>(initialSources);
   const [stale, setStale] = useState<string | null>(lastUpdated);
 
+  // Reads the response as text first, so a serverless timeout (which returns a
+  // plain error page, not JSON) surfaces a friendly message instead of crashing.
+  async function postJson<T>(url: string, body: unknown): Promise<T> {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const raw = await res.text();
+    let json: (T & { error?: string }) | null = null;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      throw new Error(
+        res.status === 504 || /timed? ?out|error occurred/i.test(raw)
+          ? "That step took too long — try a shorter, more specific request and run it again."
+          : "The advisor is unavailable right now — please try again."
+      );
+    }
+    if (!res.ok) throw new Error(json?.error || "The advisor is unavailable");
+    return json as T;
+  }
+
+  // Two steps to stay under the 60s serverless budget: fast web research, then
+  // the full Opus reasoning pass over those findings.
   async function build() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/malt-advisor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ focus }),
-      });
-      // The response may not be JSON if the function timed out (Vercel returns a
-      // plain error page), so read text first and parse defensively.
-      const raw = await res.text();
-      let json: { advice?: MaltAdvice; sources?: Source[]; error?: string } = {};
-      try {
-        json = JSON.parse(raw);
-      } catch {
-        throw new Error(
-          res.status === 504 || /timed? ?out|error occurred/i.test(raw)
-            ? "That took too long — try a shorter, more specific request and run it again."
-            : "The advisor is unavailable right now — please try again."
-        );
-      }
-      if (!res.ok || !json.advice) throw new Error(json.error || "The advisor is unavailable");
-      setAdvice(json.advice);
-      setSources(json.sources ?? []);
+      setPhase("Searching the latest releases…");
+      const research = await postJson<{ findings: string; sources: Source[] }>(
+        "/api/malt-advisor/research",
+        { focus }
+      );
+
+      setPhase("Opus is thinking through your collection…");
+      const plan = await postJson<{ advice: MaltAdvice; sources: Source[] }>(
+        "/api/malt-advisor/plan",
+        { focus, findings: research.findings, sources: research.sources }
+      );
+
+      setAdvice(plan.advice);
+      setSources(plan.sources ?? research.sources ?? []);
       setStale(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setLoading(false);
+      setPhase("");
     }
   }
 
@@ -114,11 +134,11 @@ export function MaltAdvisorView({
               }}
             />
             <button className="club-btn mt-3 w-full" disabled={loading} onClick={build}>
-              {loading ? "Consulting the market…" : "Build my acquisition plan"}
+              {loading ? phase || "Working…" : "Build my acquisition plan"}
             </button>
             <p className="mt-2 font-body text-xs text-ink-soft">
-              Reads your {maltCount} malt{maltCount === 1 ? "" : "s"} above and searches the latest
-              releases to fill the gaps. Takes a few seconds.
+              Reads your {maltCount} malt{maltCount === 1 ? "" : "s"} above, searches the latest
+              releases, then reasons over it with Opus. Takes ~20–40 seconds.
             </p>
             {error && <p className="mt-3 font-body text-sm text-oxblood">{error}</p>}
           </div>

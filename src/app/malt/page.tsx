@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { MaltAdvisorView } from "@/components/MaltAdvisorView";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/isAdmin";
-import type { MaltAdvice, Source } from "@/app/api/malt-advisor/route";
+import type { MaltAdvice, Source } from "@/lib/malt";
 import { isMalt, type Overrides } from "@/lib/whisky";
 import type { Bottle } from "@/lib/types";
 
