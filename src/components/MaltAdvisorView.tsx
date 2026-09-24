@@ -44,48 +44,59 @@ export function MaltAdvisorView({
 
   // Reads the response as text first, so a serverless timeout (which returns a
   // plain error page, not JSON) surfaces a friendly message instead of crashing.
-  async function postJson<T>(url: string, body: unknown): Promise<T> {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const raw = await res.text();
-    let json: (T & { error?: string }) | null = null;
+  // Optional timeoutMs aborts a slow call so we can fall back gracefully.
+  async function postJson<T>(url: string, body: unknown, timeoutMs?: number): Promise<T> {
+    const controller = timeoutMs ? new AbortController() : undefined;
+    const timer = timeoutMs ? setTimeout(() => controller!.abort(), timeoutMs) : undefined;
     try {
-      json = JSON.parse(raw);
-    } catch {
-      throw new Error(
-        res.status === 504 || /timed? ?out|error occurred/i.test(raw)
-          ? "That step took too long — try a shorter, more specific request and run it again."
-          : "The advisor is unavailable right now — please try again."
-      );
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller?.signal,
+      });
+      const raw = await res.text();
+      let json: (T & { error?: string }) | null = null;
+      try {
+        json = JSON.parse(raw);
+      } catch {
+        throw new Error(
+          res.status === 504 || /timed? ?out|error occurred/i.test(raw)
+            ? "That step took too long — try a shorter, more specific request and run it again."
+            : "The advisor is unavailable right now — please try again."
+        );
+      }
+      if (!res.ok) throw new Error(json?.error || "The advisor is unavailable");
+      return json as T;
+    } finally {
+      if (timer) clearTimeout(timer);
     }
-    if (!res.ok) throw new Error(json?.error || "The advisor is unavailable");
-    return json as T;
   }
 
-  // Two steps to stay under the 60s serverless budget: fast web research, then
-  // the full Opus reasoning pass over those findings.
+  // Two steps to stay under the 60s serverless budget: a fast web-research pass,
+  // then the full Opus reasoning pass. Research is best-effort — if it's slow or
+  // fails, Opus still plans from its own knowledge rather than hard-failing.
   async function build() {
     setLoading(true);
     setError(null);
     try {
       setPhase("Searching the latest releases…");
-      const research = await postJson<{ findings: string; sources: Source[] }>(
-        "/api/malt-advisor/research",
-        { focus }
-      ).catch((e) => {
-        throw new Error(`Research step: ${e instanceof Error ? e.message : e}`);
-      });
+      let research: { findings: string; sources: Source[] } = { findings: "", sources: [] };
+      try {
+        research = await postJson<{ findings: string; sources: Source[] }>(
+          "/api/malt-advisor/research",
+          { focus },
+          45000
+        );
+      } catch {
+        // Research is optional — carry on and let Opus reason from knowledge.
+      }
 
       setPhase("Opus is thinking through your collection…");
       const plan = await postJson<{ advice: MaltAdvice; sources: Source[] }>(
         "/api/malt-advisor/plan",
         { focus, findings: research.findings, sources: research.sources }
-      ).catch((e) => {
-        throw new Error(`Reasoning step: ${e instanceof Error ? e.message : e}`);
-      });
+      );
 
       setAdvice(plan.advice);
       setSources(plan.sources ?? research.sources ?? []);

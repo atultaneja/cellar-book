@@ -75,8 +75,10 @@ export async function POST(request: Request) {
     focus ? `FOCUS: ${focus}\n\n` : ""
   }Research the current market and return the findings notes.`;
 
+  // Basic web-search variant is faster than the dynamic-filtering one (which runs
+  // code execution under the hood); we only need a quick current-releases pass.
   const tools = [
-    { type: "web_search_20260209", name: "web_search", max_uses: 3 },
+    { type: "web_search_20250305", name: "web_search", max_uses: 2 },
   ] as unknown as Anthropic.Tool[];
 
   try {
@@ -86,7 +88,7 @@ export async function POST(request: Request) {
     for (let i = 0; i < 3; i++) {
       res = await client.messages.create({
         model: MODEL, // Sonnet 5 — fast enough to search several sources in budget
-        max_tokens: 1800,
+        max_tokens: 1200,
         thinking: { type: "disabled" },
         system: SYSTEM,
         output_config: { effort: "low" },
