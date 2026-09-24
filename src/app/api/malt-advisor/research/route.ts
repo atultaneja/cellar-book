@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   }Research the current market and return the findings notes.`;
 
   const tools = [
-    { type: "web_search_20260209", name: "web_search", max_uses: 4 },
+    { type: "web_search_20260209", name: "web_search", max_uses: 3 },
   ] as unknown as Anthropic.Tool[];
 
   try {

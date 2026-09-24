@@ -96,14 +96,17 @@ Now produce the acquisition plan.`;
 
   try {
     const client = anthropic();
-    const res = await client.messages.create({
+    // Stream + medium effort so Opus's deep reasoning still finishes inside the
+    // 60s serverless budget (high effort routinely overran it).
+    const stream = client.messages.stream({
       model: MODEL_ADVISOR, // Opus 5 — the reasoning step
-      max_tokens: 4000,
+      max_tokens: 3000,
       thinking: { type: "adaptive" },
       system: SYSTEM,
-      output_config: { effort: "high", format: { type: "json_schema", schema: PLAN_SCHEMA } },
+      output_config: { effort: "medium", format: { type: "json_schema", schema: PLAN_SCHEMA } },
       messages: [{ role: "user", content: userMsg }],
     });
+    const res = await stream.finalMessage();
 
     const advice = parseJsonResponse<MaltAdvice>(res.content);
 

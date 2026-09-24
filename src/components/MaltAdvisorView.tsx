@@ -75,13 +75,17 @@ export function MaltAdvisorView({
       const research = await postJson<{ findings: string; sources: Source[] }>(
         "/api/malt-advisor/research",
         { focus }
-      );
+      ).catch((e) => {
+        throw new Error(`Research step: ${e instanceof Error ? e.message : e}`);
+      });
 
       setPhase("Opus is thinking through your collection…");
       const plan = await postJson<{ advice: MaltAdvice; sources: Source[] }>(
         "/api/malt-advisor/plan",
         { focus, findings: research.findings, sources: research.sources }
-      );
+      ).catch((e) => {
+        throw new Error(`Reasoning step: ${e instanceof Error ? e.message : e}`);
+      });
 
       setAdvice(plan.advice);
       setSources(plan.sources ?? research.sources ?? []);
