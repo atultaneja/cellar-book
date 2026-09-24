@@ -178,7 +178,7 @@ ${focus ? `THIS SESSION'S FOCUS (weight your plan toward this): ${focus}\n\n` : 
 releasing and what's hot right now, then build the acquisition plan as specified.`;
 
   const tools = [
-    { type: "web_search_20260209", name: "web_search", max_uses: 6 },
+    { type: "web_search_20260209", name: "web_search", max_uses: 4 },
   ] as unknown as Anthropic.Tool[];
 
   try {

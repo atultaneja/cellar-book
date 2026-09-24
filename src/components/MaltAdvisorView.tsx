@@ -50,10 +50,22 @@ export function MaltAdvisorView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ focus }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "The advisor is unavailable");
-      setAdvice(json.advice as MaltAdvice);
-      setSources((json.sources as Source[]) ?? []);
+      // The response may not be JSON if the function timed out (Vercel returns a
+      // plain error page), so read text first and parse defensively.
+      const raw = await res.text();
+      let json: { advice?: MaltAdvice; sources?: Source[]; error?: string } = {};
+      try {
+        json = JSON.parse(raw);
+      } catch {
+        throw new Error(
+          res.status === 504 || /timed? ?out|error occurred/i.test(raw)
+            ? "That took too long — try a shorter, more specific request and run it again."
+            : "The advisor is unavailable right now — please try again."
+        );
+      }
+      if (!res.ok || !json.advice) throw new Error(json.error || "The advisor is unavailable");
+      setAdvice(json.advice);
+      setSources(json.sources ?? []);
       setStale(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");

@@ -48,9 +48,15 @@ export function MaltDashboard({
     setError(null);
     try {
       const res = await fetch("/api/malt-enrich", { method: "POST" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Couldn't enrich");
-      setOverrides((json.facets as Overrides) ?? {});
+      const raw = await res.text();
+      let json: { facets?: Overrides; error?: string } = {};
+      try {
+        json = JSON.parse(raw);
+      } catch {
+        throw new Error("That took too long — please try again.");
+      }
+      if (!res.ok || !json.facets) throw new Error(json.error || "Couldn't enrich");
+      setOverrides(json.facets);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {

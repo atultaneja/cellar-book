@@ -7,9 +7,10 @@ export const MODEL = "claude-sonnet-5";
 // picks. It's used occasionally, so the extra cost is a few cents at most.
 export const MODEL_SOMMELIER = "claude-opus-4-8";
 
-// The whisky advisor: top model + live web search, for strategic single-malt
-// acquisition guidance grounded in current releases and market chatter.
-export const MODEL_ADVISOR = "claude-opus-5";
+// The whisky advisor: live web search for current releases + market chatter.
+// Runs inside a 60s serverless budget (Vercel Hobby), so we use Sonnet 5 — fast
+// enough to search several sources and still answer in time, and strong on this.
+export const MODEL_ADVISOR = "claude-sonnet-5";
 
 export function anthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
