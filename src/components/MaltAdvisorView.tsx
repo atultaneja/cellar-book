@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { MaltAdvice, AcquirePick, WatchPick, Source } from "@/app/api/malt-advisor/route";
 import { MaltDashboard } from "./MaltDashboard";
+import type { Overrides } from "@/lib/whisky";
 import type { Bottle } from "@/lib/types";
 
 const PRIORITY_LABEL: Record<AcquirePick["priority"], string> = {
@@ -20,12 +21,14 @@ const PRIORITY_CLASS: Record<AcquirePick["priority"], string> = {
 export function MaltAdvisorView({
   aiEnabled,
   malts,
+  overrides,
   initialAdvice,
   initialSources,
   lastUpdated,
 }: {
   aiEnabled: boolean;
   malts: Bottle[];
+  overrides: Overrides;
   initialAdvice: MaltAdvice | null;
   initialSources: Source[];
   lastUpdated: string | null;
@@ -68,7 +71,7 @@ export function MaltAdvisorView({
       </p>
 
       {/* The collection dashboard — always the default view */}
-      <MaltDashboard malts={malts} />
+      <MaltDashboard malts={malts} initialOverrides={overrides} />
 
       {!aiEnabled ? (
         <div className="club-card p-6 text-center">

@@ -164,7 +164,15 @@ export const FACET_LABEL: Record<Facet, string> = {
   age: "Age",
 };
 
-export function facetValue(b: Bottle, facet: Facet): string {
+// A saved, per-bottle correction/enrichment that overrides the heuristics.
+export type FacetOverride = { region?: string; cask?: string; age?: string };
+export type Overrides = Record<string, FacetOverride>;
+
+export const SOFT_LABELS = new Set(["Unspecified", "NAS"]);
+
+export function facetValue(b: Bottle, facet: Facet, overrides?: Overrides): string {
+  const ov = overrides?.[b.id];
+  if (facet !== "type" && ov && ov[facet]) return ov[facet] as string;
   switch (facet) {
     case "region":
       return regionOf(b);
@@ -177,23 +185,33 @@ export function facetValue(b: Bottle, facet: Facet): string {
   }
 }
 
-export type Group = { label: string; total: number; inStock: number };
+// True when a bottle still lacks a real region, cask or age (nothing derived and
+// nothing saved) — i.e. a candidate for one-time enrichment.
+export function needsEnrichment(b: Bottle, overrides?: Overrides): boolean {
+  return (
+    SOFT_LABELS.has(facetValue(b, "region", overrides)) ||
+    SOFT_LABELS.has(facetValue(b, "cask", overrides)) ||
+    SOFT_LABELS.has(facetValue(b, "age", overrides))
+  );
+}
 
-// Count bottles by a facet, biggest group first, with "Unspecified"/"NAS" sunk
+export type Group = { label: string; total: number; inStock: number; items: Bottle[] };
+
+// Group bottles by a facet, biggest group first, with "Unspecified"/"NAS" sunk
 // to the bottom so the meaningful buckets lead.
-export function groupBy(bottles: Bottle[], facet: Facet): Group[] {
+export function groupBy(bottles: Bottle[], facet: Facet, overrides?: Overrides): Group[] {
   const map = new Map<string, Group>();
   for (const b of bottles) {
-    const label = facetValue(b, facet);
-    const g = map.get(label) ?? { label, total: 0, inStock: 0 };
+    const label = facetValue(b, facet, overrides);
+    const g = map.get(label) ?? { label, total: 0, inStock: 0, items: [] };
     g.total += 1;
     if (b.level > 0) g.inStock += 1;
+    g.items.push(b);
     map.set(label, g);
   }
-  const soft = new Set(["Unspecified", "NAS"]);
   return Array.from(map.values()).sort((a, b) => {
-    const aSoft = soft.has(a.label) ? 1 : 0;
-    const bSoft = soft.has(b.label) ? 1 : 0;
+    const aSoft = SOFT_LABELS.has(a.label) ? 1 : 0;
+    const bSoft = SOFT_LABELS.has(b.label) ? 1 : 0;
     if (aSoft !== bSoft) return aSoft - bSoft;
     return b.total - a.total;
   });

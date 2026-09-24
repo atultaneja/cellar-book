@@ -4,6 +4,7 @@ import { anthropic, MODEL_ADVISOR } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/isAdmin";
 import { EMPTY_PROFILE, type TasteProfile } from "@/lib/taste";
+import { facetValue, type Overrides } from "@/lib/whisky";
 import type { Bottle } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -135,24 +136,36 @@ export async function POST(request: Request) {
     // no body is fine
   }
 
-  const [{ data: bottleRows }, { data: profileRow }] = await Promise.all([
+  const [{ data: bottleRows }, { data: profileRow }, { data: facetRow }] = await Promise.all([
     supabase.from("bottles").select("*"),
     supabase.from("taste_profiles").select("data").limit(1).maybeSingle(),
+    supabase
+      .from("ai_recommendations")
+      .select("result")
+      .eq("kind", "malt_facets")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const bottles = (bottleRows as Bottle[]) ?? [];
   const malts = bottles.filter((b) => MALT_CATEGORIES.has(b.category));
   const profile: TasteProfile = { ...EMPTY_PROFILE, ...(profileRow?.data ?? {}) };
+  const overrides = (facetRow?.result as { facets?: Overrides } | null)?.facets ?? {};
 
   const collectionText =
     malts.length === 0
       ? "(no single malts in the collection yet — this is a fresh start)"
       : malts
-          .map(
-            (b) =>
-              `- ${b.name}${b.brand ? ` (${b.brand})` : ""} [${b.category}]` +
+          .map((b) => {
+            const region = facetValue(b, "region", overrides);
+            const cask = facetValue(b, "cask", overrides);
+            const age = facetValue(b, "age", overrides);
+            return (
+              `- ${b.name}${b.brand ? ` (${b.brand})` : ""} — ${region} · ${cask} · ${age}` +
               `${b.level <= 0 ? " — finished" : ""}${b.notes ? ` — ${b.notes}` : ""}`
-          )
+            );
+          })
           .join("\n");
 
   const userMsg = `MEMBER'S CURRENT SINGLE-MALT COLLECTION:
