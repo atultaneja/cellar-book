@@ -100,13 +100,22 @@ Now produce the acquisition plan.`;
     // 60s serverless budget (high effort routinely overran it).
     const stream = client.messages.stream({
       model: MODEL_ADVISOR, // Opus 5 — the reasoning step
-      max_tokens: 3000,
+      // Roomy cap: thinking tokens count toward this too, so a tight limit
+      // truncates the JSON. Streaming keeps us clear of HTTP timeouts.
+      max_tokens: 8000,
       thinking: { type: "adaptive" },
       system: SYSTEM,
       output_config: { effort: "medium", format: { type: "json_schema", schema: PLAN_SCHEMA } },
       messages: [{ role: "user", content: userMsg }],
     });
     const res = await stream.finalMessage();
+
+    if (res.stop_reason === "max_tokens") {
+      return NextResponse.json(
+        { error: "The plan was cut off — please try again." },
+        { status: 502 }
+      );
+    }
 
     const advice = parseJsonResponse<MaltAdvice>(res.content);
 
