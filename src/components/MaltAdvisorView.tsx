@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { MaltAdvice, AcquirePick, WatchPick, Source } from "@/lib/malt";
+import type { MaltAdvice, AcquirePick, WatchPick, Source, Verdict } from "@/lib/malt";
 import { MaltDashboard } from "./MaltDashboard";
 import type { Overrides } from "@/lib/whisky";
 import type { Bottle } from "@/lib/types";
@@ -167,6 +167,10 @@ export function MaltAdvisorView({
                 </p>
               )}
 
+              {advice.verdict && advice.verdict.call !== "none" && (
+                <VerdictCard v={advice.verdict} />
+              )}
+
               {advice.assessment && (
                 <section>
                   <SectionHead label="Where your collection stands" />
@@ -236,6 +240,45 @@ export function MaltAdvisorView({
           )}
         </>
       )}
+    </div>
+  );
+}
+
+const VERDICT_META: Record<
+  Exclude<Verdict["call"], "none">,
+  { label: string; card: string; chip: string }
+> = {
+  buy: {
+    label: "Buy it",
+    card: "border-racing/40 bg-racing/10",
+    chip: "border-racing bg-racing text-parchment",
+  },
+  hold: {
+    label: "Keep it",
+    card: "border-brass/50 bg-brass/10",
+    chip: "border-brass bg-brass/20 text-brass-dark",
+  },
+  skip: {
+    label: "Skip it",
+    card: "border-oxblood/40 bg-oxblood/10",
+    chip: "border-oxblood bg-oxblood text-parchment",
+  },
+};
+
+function VerdictCard({ v }: { v: Verdict }) {
+  const meta = VERDICT_META[v.call as Exclude<Verdict["call"], "none">] ?? VERDICT_META.hold;
+  return (
+    <div className={`club-card p-4 ${meta.card}`}>
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <span className="font-body text-[11px] uppercase tracking-widest text-ink-soft">
+          On the bottle you asked about
+        </span>
+        <span className={`club-chip ${meta.chip}`}>{meta.label}</span>
+      </div>
+      {v.bottle && (
+        <h3 className="font-display text-lg font-semibold text-racing">{v.bottle}</h3>
+      )}
+      <p className="mt-1 font-body text-sm text-ink">{v.reason}</p>
     </div>
   );
 }

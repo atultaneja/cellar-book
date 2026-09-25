@@ -19,7 +19,16 @@ export type WatchPick = {
   why: string;
 };
 
+// A direct answer to a specific bottle named in the member's request. call is
+// "none" when the request didn't ask about a particular bottle.
+export type Verdict = {
+  bottle: string;
+  call: "buy" | "hold" | "skip" | "none";
+  reason: string;
+};
+
 export type MaltAdvice = {
+  verdict: Verdict;
   assessment: string;
   strategy: string;
   acquire: AcquirePick[];
@@ -35,6 +44,16 @@ export const PLAN_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
+    verdict: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        bottle: { type: "string" },
+        call: { type: "string", enum: ["buy", "hold", "skip", "none"] },
+        reason: { type: "string" },
+      },
+      required: ["bottle", "call", "reason"],
+    },
     assessment: { type: "string" },
     strategy: { type: "string" },
     acquire: {
@@ -69,5 +88,5 @@ export const PLAN_SCHEMA = {
     },
     note: { type: "string" },
   },
-  required: ["assessment", "strategy", "acquire", "watch", "note"],
+  required: ["verdict", "assessment", "strategy", "acquire", "watch", "note"],
 } as const;

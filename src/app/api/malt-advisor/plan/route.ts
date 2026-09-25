@@ -21,6 +21,10 @@ fill regional, cask, age and style gaps; balance daily-drinkers with special bot
 purchases around what the notes say is available or worth waiting for.
 
 Rules:
+- If the FOCUS names or asks about a SPECIFIC bottle (one they've bought, pre-booked, or are
+  considering), fill "verdict" with a direct call on THAT bottle: "buy", "hold" (already have/ordered
+  — keep it), or "skip", plus a one-sentence reason. Set "bottle" to the bottle's name. If the focus
+  does not centre on a specific bottle, set call to "none" and leave bottle/reason as empty strings.
 - 4-6 "acquire" picks, ordered by priority (now first). Real, buyable expressions — never invented.
 - Ground picks in the RESEARCH NOTES where possible; anchor each to a specific GAP in THEIR collection.
 - 2-4 "watch" picks for upcoming/limited releases from the notes.
