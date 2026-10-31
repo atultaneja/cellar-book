@@ -30,6 +30,7 @@ export function PartyView({
   const [copied, setCopied] = useState(false);
   const [customName, setCustomName] = useState("");
   const [customDesc, setCustomDesc] = useState("");
+  const [bottleQuery, setBottleQuery] = useState("");
 
   // Host-defined cocktails (anything not in the built-in canon), decoded from
   // their stored ids so we can show name + description and remove them.
@@ -45,6 +46,21 @@ export function PartyView({
   );
 
   const stocked = useMemo(() => bottles.filter((b) => inStock(b.level)), [bottles]);
+
+  // Bottles currently marked open — shown as an at-a-glance summary.
+  const openList = useMemo(
+    () => stocked.filter((b) => openBottles.has(b.id)),
+    [stocked, openBottles]
+  );
+
+  // The pickable list, filtered by the search box (name / brand / category).
+  const filteredStocked = useMemo(() => {
+    const q = bottleQuery.trim().toLowerCase();
+    if (!q) return stocked;
+    return stocked.filter((b) =>
+      `${b.name} ${b.brand ?? ""} ${b.category}`.toLowerCase().includes(q)
+    );
+  }, [stocked, bottleQuery]);
 
   const availableCats = useMemo(() => {
     const s = new Set<string>();
@@ -293,14 +309,41 @@ export function PartyView({
         </div>
       </section>
 
-      {/* Open bottles */}
-      <section>
+      {/* What's open right now — at a glance */}
+      <section className="mb-6">
         <SectionHead label={`Open at the bar (${openBottles.size})`} />
-        <p className="mb-2 font-body text-xs text-ink-soft">
-          Tap the bottles you&rsquo;re opening tonight.
-        </p>
+        {openList.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {openList.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => toggleBottle(b.id)}
+                title="Tap to close"
+                className="club-chip border-racing bg-racing text-parchment"
+              >
+                {b.name}
+                <span className="ml-1.5 opacity-70">✕</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="font-body text-sm italic text-ink-soft">
+            Nothing open yet — pick bottles below.
+          </p>
+        )}
+      </section>
+
+      {/* Pick bottles to open */}
+      <section>
+        <SectionHead label="Add bottles" />
+        <input
+          className="club-input mb-2"
+          placeholder="Search your cellar — name, brand or category"
+          value={bottleQuery}
+          onChange={(e) => setBottleQuery(e.target.value)}
+        />
         <div className="club-card divide-y divide-brass/20">
-          {stocked.map((b) => {
+          {filteredStocked.map((b) => {
             const on = openBottles.has(b.id);
             return (
               <button
@@ -318,6 +361,7 @@ export function PartyView({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-body font-semibold text-ink">{b.name}</span>
                   <span className="block truncate font-body text-xs text-ink-soft">
+                    {b.brand ? `${b.brand} · ` : ""}
                     {b.category}
                   </span>
                 </span>
@@ -327,6 +371,11 @@ export function PartyView({
           {stocked.length === 0 && (
             <p className="px-4 py-6 text-center font-body text-sm italic text-ink-soft">
               No bottles in stock to open. Fill the cellar first.
+            </p>
+          )}
+          {stocked.length > 0 && filteredStocked.length === 0 && (
+            <p className="px-4 py-6 text-center font-body text-sm italic text-ink-soft">
+              No bottles match &ldquo;{bottleQuery}&rdquo;.
             </p>
           )}
         </div>
