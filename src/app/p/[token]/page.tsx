@@ -2,6 +2,7 @@ import { Crest } from "@/components/Crest";
 import { PartyContributions } from "@/components/PartyContributions";
 import { createClient } from "@/lib/supabase/server";
 import { cocktailById } from "@/lib/cocktails";
+import { decodeCustom, isCustomId } from "@/lib/customCocktail";
 import type { PublicParty } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,19 @@ export default async function PublicPartyPage({ params }: { params: { token: str
     );
   }
 
-  const offered = party.cocktails.map(cocktailById).filter(Boolean);
+  // Built-in canon cocktails (show name + method) and host-added custom ones
+  // (show name + description), both from the party's stored cocktail ids.
+  const canonOffered = party.cocktails
+    .filter((id) => !isCustomId(id))
+    .map(cocktailById)
+    .filter(Boolean)
+    .map((c) => ({ key: c!.id, name: c!.name, body: c!.method }));
+  const customOffered = party.cocktails
+    .filter(isCustomId)
+    .map(decodeCustom)
+    .filter(Boolean)
+    .map((c) => ({ key: c!.id, name: c!.name, body: c!.description }));
+  const offered = [...canonOffered, ...customOffered];
 
   // Group open bottles by category
   const byCat = new Map<string, PublicParty["bottles"]>();
@@ -46,9 +59,9 @@ export default async function PublicPartyPage({ params }: { params: { token: str
           </h2>
           <div className="grid grid-cols-1 gap-3">
             {offered.map((c) => (
-              <div key={c!.id} className="club-card p-4">
-                <h3 className="font-display text-lg font-semibold text-racing">{c!.name}</h3>
-                <p className="mt-1 font-body text-sm text-ink">{c!.method}</p>
+              <div key={c.key} className="club-card p-4">
+                <h3 className="font-display text-lg font-semibold text-racing">{c.name}</h3>
+                {c.body && <p className="mt-1 font-body text-sm text-ink">{c.body}</p>}
               </div>
             ))}
           </div>

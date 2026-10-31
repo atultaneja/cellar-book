@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { COCKTAILS, makeable } from "@/lib/cocktails";
 import { tokensFor } from "@/lib/categories";
 import { inStock } from "@/lib/levels";
+import { decodeCustom, encodeCustom, isCustomId } from "@/lib/customCocktail";
 import type { Bottle, Party } from "@/lib/types";
 
 export function PartyView({
@@ -27,6 +28,21 @@ export function PartyView({
   const [name, setName] = useState("This Evening");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customDesc, setCustomDesc] = useState("");
+
+  // Host-defined cocktails (anything not in the built-in canon), decoded from
+  // their stored ids so we can show name + description and remove them.
+  const customCocktails = useMemo(
+    () =>
+      Array.from(cocktails)
+        .filter(isCustomId)
+        .map((id) => ({ cocktailId: id, data: decodeCustom(id) }))
+        .filter((c): c is { cocktailId: string; data: NonNullable<ReturnType<typeof decodeCustom>> } =>
+          c.data !== null
+        ),
+    [cocktails]
+  );
 
   const stocked = useMemo(() => bottles.filter((b) => inStock(b.level)), [bottles]);
 
@@ -87,6 +103,31 @@ export function PartyView({
     } else {
       await supabase.from("party_cocktails").insert({ party_id: party.id, cocktail_id: id });
     }
+  }
+
+  async function addCustomCocktail() {
+    if (!party) return;
+    const n = customName.trim();
+    if (!n) return;
+    const id = encodeCustom(n, customDesc);
+    const next = new Set(cocktails);
+    next.add(id);
+    setCocktails(next);
+    setCustomName("");
+    setCustomDesc("");
+    await supabase.from("party_cocktails").insert({ party_id: party.id, cocktail_id: id });
+  }
+
+  async function removeCocktailId(id: string) {
+    if (!party) return;
+    const next = new Set(cocktails);
+    next.delete(id);
+    setCocktails(next);
+    await supabase
+      .from("party_cocktails")
+      .delete()
+      .eq("party_id", party.id)
+      .eq("cocktail_id", id);
   }
 
   async function endParty() {
@@ -194,9 +235,61 @@ export function PartyView({
           })}
           {suggestedCocktails.length === 0 && (
             <p className="font-body text-sm italic text-ink-soft">
-              No complete cocktails from current stock — pick open bottles below instead.
+              No complete cocktails from current stock — add your own below or pick open bottles.
             </p>
           )}
+        </div>
+
+        {/* Host-added cocktails */}
+        {customCocktails.length > 0 && (
+          <div className="mt-3 club-card divide-y divide-brass/20">
+            {customCocktails.map(({ cocktailId, data }) => (
+              <div key={cocktailId} className="flex items-start justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="font-body font-semibold text-ink">{data.name}</div>
+                  {data.description && (
+                    <div className="font-body text-sm text-ink-soft">{data.description}</div>
+                  )}
+                </div>
+                <button
+                  onClick={() => removeCocktailId(cocktailId)}
+                  aria-label={`Remove ${data.name}`}
+                  className="shrink-0 font-body text-xs font-semibold text-oxblood hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add any cocktail */}
+        <div className="mt-3 club-card p-4">
+          <label className="club-label">Add any cocktail</label>
+          <input
+            className="club-input"
+            placeholder="Cocktail name — e.g. Bloody Mary"
+            value={customName}
+            maxLength={80}
+            onChange={(e) => setCustomName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addCustomCocktail();
+            }}
+          />
+          <textarea
+            className="club-input mt-2 min-h-[64px] resize-y"
+            placeholder="Brief description (optional) — e.g. Vodka, tomato juice, lemon & spices, served tall"
+            value={customDesc}
+            maxLength={280}
+            onChange={(e) => setCustomDesc(e.target.value)}
+          />
+          <button
+            className="club-btn mt-3 w-full"
+            disabled={!customName.trim()}
+            onClick={addCustomCocktail}
+          >
+            Add to the menu
+          </button>
         </div>
       </section>
 
