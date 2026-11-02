@@ -14,6 +14,7 @@ type Candidate = {
   confidence: "high" | "medium" | "low";
   include: boolean;
   level: number;
+  qty: number;
 };
 
 // Downscale a photo to a max edge and return base64 JPEG (keeps upload small
@@ -70,6 +71,7 @@ export function PhotoScan({
         include: true,
         // Clamp to the valid 0–5 range (DB rejects anything outside it).
         level: Math.min(5, Math.max(0, b.guessed_level ?? 5)),
+        qty: 1,
       }));
       if (found.length === 0) setError("No bottles recognised — try a clearer, closer photo.");
       setCandidates(found);
@@ -89,14 +91,18 @@ export function PhotoScan({
     const chosen = candidates.filter((c) => c.include && c.name.trim());
     if (chosen.length === 0) return;
     setSaving(true);
+    // Expand each confirmed bottle into `qty` individual cellar entries, since
+    // bottles are tracked (and poured from) one at a time.
     await onAdd(
-      chosen.map((c) => ({
-        name: c.name.trim(),
-        brand: c.brand?.trim() || null,
-        category: c.category,
-        size: c.size,
-        level: c.level,
-      }))
+      chosen.flatMap((c) =>
+        Array.from({ length: Math.max(1, c.qty) }, () => ({
+          name: c.name.trim(),
+          brand: c.brand?.trim() || null,
+          category: c.category,
+          size: c.size,
+          level: c.level,
+        }))
+      )
     );
     setSaving(false);
     onDone();
@@ -197,13 +203,52 @@ export function PhotoScan({
                       </option>
                     ))}
                   </select>
+                  <div className="col-span-2 flex items-center justify-between gap-2 rounded-md border border-brass/40 bg-parchment px-3 py-2">
+                    <span className="font-body text-sm text-ink-soft">Quantity</span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        aria-label="Decrease quantity"
+                        className="grid h-7 w-7 place-items-center rounded border border-brass/40 font-body text-lg leading-none text-racing hover:bg-brass/10 disabled:opacity-40"
+                        disabled={c.qty <= 1}
+                        onClick={() => patch(i, { qty: Math.max(1, c.qty - 1) })}
+                      >
+                        −
+                      </button>
+                      <input
+                        className="w-12 bg-transparent text-center font-body font-semibold text-ink outline-none"
+                        inputMode="numeric"
+                        value={c.qty}
+                        onChange={(e) => {
+                          const n = parseInt(e.target.value.replace(/\D/g, ""), 10);
+                          patch(i, { qty: Math.min(99, Math.max(1, isNaN(n) ? 1 : n)) });
+                        }}
+                      />
+                      <button
+                        type="button"
+                        aria-label="Increase quantity"
+                        className="grid h-7 w-7 place-items-center rounded border border-brass/40 font-body text-lg leading-none text-racing hover:bg-brass/10 disabled:opacity-40"
+                        disabled={c.qty >= 99}
+                        onClick={() => patch(i, { qty: Math.min(99, c.qty + 1) })}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
           <div className="mt-4 flex gap-2">
             <button className="club-btn flex-1" disabled={saving} onClick={saveSelected}>
-              {saving ? "Adding…" : "Add selected to cellar"}
+              {saving
+                ? "Adding…"
+                : (() => {
+                    const total = candidates
+                      .filter((c) => c.include && c.name.trim())
+                      .reduce((n, c) => n + Math.max(1, c.qty), 0);
+                    return `Add ${total} to cellar`;
+                  })()}
             </button>
             <button className="club-btn-ghost" onClick={onDone}>
               Cancel
