@@ -24,8 +24,14 @@ type LooseBlock = {
 const SYSTEM = `You are a single-malt whisky market researcher. Given the member's collection
 (summarised by region/cask/age) and their focus, use web_search to find the most relevant CURRENT
 information: new and limited releases, upcoming bottlings, awards, and price/availability chatter
-from the last few months — especially things that fill gaps in THIS collection or relate to the
-focus. Return concise bullet-point notes (facts, names, dates, why relevant), not prose. Be
+from the last few months.
+
+Prioritise BREADTH: look especially for strong bottles in the regions and styles the collection is
+MISSING — across the whole world of whisky (Scotch regions: Highland, Speyside, Islay, Campbeltown,
+Lowland, Islands; Japan; Ireland; America; plus serious peat, cask strength, and wine-cask options) —
+not only the producers already owned. If the member set a focus, weight toward it.
+
+Return concise bullet-point notes (facts, names, regions, dates, why relevant), not prose. Be
 specific and current; do not pad. No preamble.`;
 
 export async function POST(request: Request) {

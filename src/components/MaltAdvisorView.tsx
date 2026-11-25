@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { MaltAdvice, AcquirePick, WatchPick, Source, Verdict } from "@/lib/malt";
+import type { MaltAdvice, Pick, Gap, WatchPick, Source, Verdict } from "@/lib/malt";
 import { MaltDashboard } from "./MaltDashboard";
 import type { Overrides } from "@/lib/whisky";
 import type { Bottle } from "@/lib/types";
 
-const PRIORITY_LABEL: Record<AcquirePick["priority"], string> = {
+const PRIORITY_LABEL: Record<Pick["priority"], string> = {
   now: "Buy now",
   soon: "Buy soon",
   opportunistic: "If you spot it",
 };
 
-const PRIORITY_CLASS: Record<AcquirePick["priority"], string> = {
+const PRIORITY_CLASS: Record<Pick["priority"], string> = {
   now: "border-oxblood/40 bg-oxblood/10 text-oxblood",
   soon: "border-brass/50 bg-brass/10 text-brass-dark",
   opportunistic: "border-racing/30 bg-racing/10 text-racing",
@@ -171,24 +171,21 @@ export function MaltAdvisorView({
                 <VerdictCard v={advice.verdict} />
               )}
 
-              {advice.assessment && (
-                <section>
-                  <SectionHead label="Where your collection stands" />
-                  <div className="club-card p-4">
-                    <p className="font-body text-sm text-ink">{advice.assessment}</p>
-                    {advice.strategy && (
-                      <p className="mt-3 font-body text-sm italic text-ink-soft">{advice.strategy}</p>
-                    )}
+              {advice.headline && (
+                <div className="club-card border-racing/30 bg-racing/5 p-4">
+                  <div className="mb-1 font-body text-[11px] uppercase tracking-widest text-brass-dark">
+                    The plan
                   </div>
-                </section>
+                  <p className="font-body text-sm text-ink">{advice.headline}</p>
+                </div>
               )}
 
-              {advice.acquire.length > 0 && (
+              {advice.gaps?.length > 0 && (
                 <section>
-                  <SectionHead label="Acquire next" />
-                  <div className="grid grid-cols-1 gap-3">
-                    {advice.acquire.map((p, i) => (
-                      <AcquireCard key={i} p={p} />
+                  <SectionHead label="Gaps to fill" />
+                  <div className="space-y-4">
+                    {advice.gaps.map((g, i) => (
+                      <GapBlock key={i} gap={g} index={i + 1} />
                     ))}
                   </div>
                 </section>
@@ -283,7 +280,28 @@ function VerdictCard({ v }: { v: Verdict }) {
   );
 }
 
-function AcquireCard({ p }: { p: AcquirePick }) {
+function GapBlock({ gap, index }: { gap: Gap; index: number }) {
+  return (
+    <div>
+      <div className="mb-2 flex items-baseline gap-2.5">
+        <span className="font-display text-sm font-bold text-brass-dark">{index}</span>
+        <div className="min-w-0">
+          <h3 className="font-display text-base font-semibold leading-tight text-racing">
+            {gap.gap}
+          </h3>
+          {gap.why && <p className="mt-0.5 font-body text-xs text-ink-soft">{gap.why}</p>}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-2 border-l border-brass/25 pl-3.5">
+        {gap.picks.map((p, i) => (
+          <AcquireCard key={i} p={p} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AcquireCard({ p }: { p: Pick }) {
   return (
     <div className="club-card p-4">
       <div className="flex items-baseline justify-between gap-2">

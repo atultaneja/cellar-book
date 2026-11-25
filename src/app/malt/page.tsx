@@ -44,6 +44,10 @@ export default async function MaltPage() {
   );
 
   const saved = (lastRec?.result as { advice?: MaltAdvice; sources?: Source[] } | null) ?? null;
+  // Only show a saved plan if it uses the current gap-structured shape; older
+  // plans fall back to the fresh-start state cleanly.
+  const savedAdvice =
+    saved?.advice && Array.isArray((saved.advice as { gaps?: unknown }).gaps) ? saved.advice : null;
   const overrides = (facetRow?.result as { facets?: Overrides } | null)?.facets ?? {};
 
   return (
@@ -52,9 +56,9 @@ export default async function MaltPage() {
         aiEnabled={!!process.env.ANTHROPIC_API_KEY}
         malts={malts}
         overrides={overrides}
-        initialAdvice={saved?.advice ?? null}
-        initialSources={saved?.sources ?? []}
-        lastUpdated={lastRec?.created_at ?? null}
+        initialAdvice={savedAdvice}
+        initialSources={savedAdvice ? saved?.sources ?? [] : []}
+        lastUpdated={savedAdvice ? lastRec?.created_at ?? null : null}
       />
     </AppShell>
   );

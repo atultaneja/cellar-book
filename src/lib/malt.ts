@@ -2,14 +2,25 @@
 // stay under the 60s serverless budget while keeping the reasoning on Opus:
 //   1. /api/malt-advisor/research — fast model + web search → current findings
 //   2. /api/malt-advisor/plan     — Opus 5 + deep thinking → the acquisition plan
+//
+// The plan is organized by GAP: each gap in the collection, then the specific
+// bottles that fill it — breadth across regions/styles first, verticals later.
 
-export type AcquirePick = {
+export type Priority = "now" | "soon" | "opportunistic";
+
+export type Pick = {
   name: string;
   distillery: string;
-  style: string; // region / cask / profile
+  style: string; // region / cask / profile, e.g. "Islay · heavily peated · 50%"
   approx_price: string;
-  priority: "now" | "soon" | "opportunistic";
-  why: string;
+  priority: Priority;
+  why: string; // 1 sentence: how it fills the gap (and any news hook)
+};
+
+export type Gap = {
+  gap: string; // short label, e.g. "Highland Scotch — unrepresented"
+  why: string; // 1 sentence on why it matters for this collection
+  picks: Pick[]; // the solution(s)
 };
 
 export type WatchPick = {
@@ -29,17 +40,28 @@ export type Verdict = {
 
 export type MaltAdvice = {
   verdict: Verdict;
-  assessment: string;
-  strategy: string;
-  acquire: AcquirePick[];
+  headline: string; // 1-2 sentences: the strategic direction of this plan
+  gaps: Gap[];
   watch: WatchPick[];
   note: string;
 };
 
 export type Source = { title: string; url: string };
 
-// Structured-output schema for the plan step (no tools in that call, so
-// output_config.format is safe to use for guaranteed-valid JSON).
+const PICK_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    name: { type: "string" },
+    distillery: { type: "string" },
+    style: { type: "string" },
+    approx_price: { type: "string" },
+    priority: { type: "string", enum: ["now", "soon", "opportunistic"] },
+    why: { type: "string" },
+  },
+  required: ["name", "distillery", "style", "approx_price", "priority", "why"],
+} as const;
+
 export const PLAN_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -54,22 +76,18 @@ export const PLAN_SCHEMA = {
       },
       required: ["bottle", "call", "reason"],
     },
-    assessment: { type: "string" },
-    strategy: { type: "string" },
-    acquire: {
+    headline: { type: "string" },
+    gaps: {
       type: "array",
       items: {
         type: "object",
         additionalProperties: false,
         properties: {
-          name: { type: "string" },
-          distillery: { type: "string" },
-          style: { type: "string" },
-          approx_price: { type: "string" },
-          priority: { type: "string", enum: ["now", "soon", "opportunistic"] },
+          gap: { type: "string" },
           why: { type: "string" },
+          picks: { type: "array", items: PICK_SCHEMA },
         },
-        required: ["name", "distillery", "style", "approx_price", "priority", "why"],
+        required: ["gap", "why", "picks"],
       },
     },
     watch: {
@@ -88,5 +106,5 @@ export const PLAN_SCHEMA = {
     },
     note: { type: "string" },
   },
-  required: ["verdict", "assessment", "strategy", "acquire", "watch", "note"],
+  required: ["verdict", "headline", "gaps", "watch", "note"],
 } as const;
