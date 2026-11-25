@@ -6,9 +6,10 @@
 
 import type { Bottle } from "./types";
 
+// The Malt tab is for single malts. Blended Malt Scotch (a vatted blend of
+// single malts, e.g. Yello, Monkey Shoulder) is deliberately excluded.
 export const MALT_CATEGORIES = [
   "Single Malt Scotch",
-  "Blended Malt Scotch",
   "Japanese Whisky",
   "Indian Single Malt",
 ] as const;
