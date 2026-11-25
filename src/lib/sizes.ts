@@ -27,6 +27,20 @@ export function normalizeSize(value: string | null | undefined): BottleSize {
   return hit ?? DEFAULT_SIZE;
 }
 
+// The smallest bottle that counts as a real bar bottle. Anything below this is
+// a miniature / tasting pour and is excluded from recommendations, the restock
+// list, and anywhere the app reasons about what's actually stocked. (A 375 ml
+// half-bottle still counts; 50–200 ml minis do not.)
+export const MIN_FULL_SIZE_ML = 375;
+
+// Does this bottle count as full-size for recommendations? Unknown sizes are
+// treated as full-size, since a catalogued bottle with no size is far more
+// likely a real bottle than a mini.
+export function isFullSize(size: string | null | undefined): boolean {
+  const ml = sizeToMl(size);
+  return ml == null || ml >= MIN_FULL_SIZE_ML;
+}
+
 // Total millilitres for a size label, or null when unknown/unparseable.
 export function sizeToMl(size: string | null | undefined): number | null {
   if (!size) return null;

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/isAdmin";
 import type { MaltAdvice, Source } from "@/lib/malt";
 import { isMalt, type Overrides } from "@/lib/whisky";
+import { isFullSize } from "@/lib/sizes";
 import type { Bottle } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,11 @@ export default async function MaltPage() {
       .maybeSingle(),
   ]);
 
-  const malts = ((bottles as Bottle[]) ?? []).filter((b) => isMalt(b.category));
+  // Full-size bottles only — the dashboard and advisor reason about real
+  // collection bottles, not 50 ml tasting miniatures.
+  const malts = ((bottles as Bottle[]) ?? []).filter(
+    (b) => isMalt(b.category) && isFullSize(b.size)
+  );
 
   const saved = (lastRec?.result as { advice?: MaltAdvice; sources?: Source[] } | null) ?? null;
   const overrides = (facetRow?.result as { facets?: Overrides } | null)?.facets ?? {};

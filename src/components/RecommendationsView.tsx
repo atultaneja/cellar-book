@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { COCKTAILS, NEAT_POURS, makeable, missingCount, type Cocktail, type Mood } from "@/lib/cocktails";
 import { inStock } from "@/lib/levels";
+import { isFullSize } from "@/lib/sizes";
 import { tokensFor, familyOf, FAMILIES } from "@/lib/categories";
 import { profileIsEmpty, type TasteProfile } from "@/lib/taste";
 import type { Bottle } from "@/lib/types";
@@ -62,9 +63,12 @@ export function RecommendationsView({
     setTimeout(() => setToast(null), 3500);
   }
 
+  // Real bar bottles only — miniatures are tasting pours, not what you build
+  // cocktails from or judge the collection's gaps by.
   const available = useMemo(() => {
     const s = new Set<string>();
-    for (const b of bottles) if (inStock(b.level)) tokensFor(b.category).forEach((t) => s.add(t));
+    for (const b of bottles)
+      if (inStock(b.level) && isFullSize(b.size)) tokensFor(b.category).forEach((t) => s.add(t));
     return s;
   }, [bottles]);
 
@@ -97,6 +101,7 @@ export function RecommendationsView({
   const gaps = useMemo(() => {
     const count = new Map<string, number>();
     for (const b of bottles) {
+      if (!isFullSize(b.size)) continue;
       const f = familyOf(b.category);
       count.set(f, (count.get(f) ?? 0) + 1);
     }

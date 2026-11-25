@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { levelMeta, inStock } from "@/lib/levels";
+import { isFullSize } from "@/lib/sizes";
 import { anthropic, MODEL, parseJsonResponse } from "@/lib/ai";
 import { COCKTAILS, makeable } from "@/lib/cocktails";
 import { tokensFor } from "@/lib/categories";
@@ -25,21 +26,24 @@ export async function GET(request: Request) {
   const [{ data: low }, { data: allBottles }, { data: profileRows }] = await Promise.all([
     supabase
       .from("bottles")
-      .select("name, category, level")
+      .select("name, category, level, size")
       .lte("level", 1)
       .eq("restock_ignore", false)
       .order("level"),
-    supabase.from("bottles").select("name, brand, category, level"),
+    supabase.from("bottles").select("name, brand, category, level, size"),
     supabase.from("taste_profiles").select("data").limit(1),
   ]);
 
-  const restock = low ?? [];
+  // Real bar bottles only — miniatures don't belong on the restock list or the pick.
+  const restock = (low ?? []).filter((b) => isFullSize(b.size as string | null));
   const bottles = allBottles ?? [];
 
   // ---- Sommelier's pick of the week (best-effort) ----
   let pick: { title: string; detail: string } | null = null;
   try {
-    const stocked = bottles.filter((b) => inStock(b.level as number));
+    const stocked = bottles.filter(
+      (b) => inStock(b.level as number) && isFullSize(b.size as string | null)
+    );
     const availableCats = new Set<string>();
     for (const b of stocked) tokensFor(b.category as string).forEach((t) => availableCats.add(t));
     const canMake = COCKTAILS.filter((c) => makeable(c, availableCats));

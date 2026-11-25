@@ -3,6 +3,7 @@ import { anthropic, MODEL, parseJsonResponse } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/isAdmin";
 import { isMalt, needsEnrichment, type Overrides } from "@/lib/whisky";
+import { isFullSize } from "@/lib/sizes";
 import type { Bottle } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -74,7 +75,7 @@ export async function POST() {
   const bottles = (bottleRows as Bottle[]) ?? [];
   const existing: Overrides = (savedRow?.result as { facets?: Overrides } | null)?.facets ?? {};
 
-  const malts = bottles.filter((b) => isMalt(b.category));
+  const malts = bottles.filter((b) => isMalt(b.category) && isFullSize(b.size));
   const todo = malts.filter((b) => needsEnrichment(b, existing));
 
   if (todo.length === 0) {

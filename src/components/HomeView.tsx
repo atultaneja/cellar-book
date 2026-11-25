@@ -3,6 +3,7 @@ import { Crest } from "./Crest";
 import { Gallery } from "./Gallery";
 import { familyOf, FAMILIES } from "@/lib/categories";
 import { inStock, needsRestock } from "@/lib/levels";
+import { isFullSize } from "@/lib/sizes";
 import type { Bottle } from "@/lib/types";
 
 type Pour = {
@@ -50,7 +51,10 @@ export function HomeView({
 }) {
   const total = bottles.length;
   const good = bottles.filter((b) => inStock(b.level)).length;
-  const low = bottles.filter((b) => needsRestock(b.level) && !b.restock_ignore).length;
+  // "To restock" mirrors the restock list: real bottles only, not minis.
+  const low = bottles.filter(
+    (b) => isFullSize(b.size) && needsRestock(b.level) && !b.restock_ignore
+  ).length;
 
   const famCounts = FAMILIES.map((f) => ({
     family: f,

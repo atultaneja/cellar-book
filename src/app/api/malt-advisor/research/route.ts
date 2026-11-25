@@ -4,6 +4,7 @@ import { anthropic, MODEL } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/isAdmin";
 import { isMalt, facetValue, type Overrides } from "@/lib/whisky";
+import { isFullSize } from "@/lib/sizes";
 import type { Source } from "@/lib/malt";
 import type { Bottle } from "@/lib/types";
 
@@ -57,7 +58,8 @@ export async function POST(request: Request) {
   ]);
 
   const bottles = (bottleRows as Bottle[]) ?? [];
-  const malts = bottles.filter((b) => isMalt(b.category));
+  // Full-size bottles only — a 50 ml mini is a tasting pour, not a collection bottle.
+  const malts = bottles.filter((b) => isMalt(b.category) && isFullSize(b.size));
   const overrides = (facetRow?.result as { facets?: Overrides } | null)?.facets ?? {};
 
   const summary =

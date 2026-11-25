@@ -3,6 +3,7 @@ import { anthropic, MODEL_ADVISOR, parseJsonResponse } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/isAdmin";
 import { isMalt, facetValue, type Overrides } from "@/lib/whisky";
+import { isFullSize } from "@/lib/sizes";
 import { PLAN_SCHEMA, type MaltAdvice, type Source } from "@/lib/malt";
 import { EMPTY_PROFILE, type TasteProfile } from "@/lib/taste";
 import type { Bottle } from "@/lib/types";
@@ -71,7 +72,8 @@ export async function POST(request: Request) {
   ]);
 
   const bottles = (bottleRows as Bottle[]) ?? [];
-  const malts = bottles.filter((b) => isMalt(b.category));
+  // Full-size bottles only — a 50 ml mini is a tasting pour, not a collection bottle.
+  const malts = bottles.filter((b) => isMalt(b.category) && isFullSize(b.size));
   const profile: TasteProfile = { ...EMPTY_PROFILE, ...(profileRow?.data ?? {}) };
   const overrides = (facetRow?.result as { facets?: Overrides } | null)?.facets ?? {};
 

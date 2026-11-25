@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { levelMeta, needsRestock, inStock } from "@/lib/levels";
+import { isFullSize } from "@/lib/sizes";
 import { familyOf, FAMILIES } from "@/lib/categories";
 import type { Bottle } from "@/lib/types";
 
@@ -32,12 +33,15 @@ export function RestockView({ bottles, isAdmin }: { bottles: Bottle[]; isAdmin: 
       level: levels[b.id] ?? b.level,
       restock_ignore: ignored[b.id] ?? false,
     }));
-    const lowAll = current.filter((b) => needsRestock(b.level));
+    // Restocking is about real bar bottles — miniatures are tasting pours, so
+    // they never belong on the restock list or count toward a depleted shelf.
+    const real = current.filter((b) => isFullSize(b.size));
+    const lowAll = real.filter((b) => needsRestock(b.level));
     const low = lowAll.filter((b) => !b.restock_ignore);
     const hidden = lowAll.filter((b) => b.restock_ignore);
 
     const famTotals = new Map<string, { total: number; stocked: number }>();
-    for (const b of current) {
+    for (const b of real) {
       const f = familyOf(b.category);
       const t = famTotals.get(f) ?? { total: 0, stocked: 0 };
       t.total += 1;

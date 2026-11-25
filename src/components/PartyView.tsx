@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { COCKTAILS, makeable } from "@/lib/cocktails";
 import { tokensFor } from "@/lib/categories";
 import { inStock } from "@/lib/levels";
+import { isFullSize } from "@/lib/sizes";
 import { decodeCustom, encodeCustom, isCustomId } from "@/lib/customCocktail";
 import type { Bottle, Party } from "@/lib/types";
 
@@ -62,9 +63,11 @@ export function PartyView({
     );
   }, [stocked, bottleQuery]);
 
+  // Cocktail suggestions come from real bar bottles (not miniatures), though the
+  // open-bottles picker below still lists everything in stock.
   const availableCats = useMemo(() => {
     const s = new Set<string>();
-    for (const b of stocked) tokensFor(b.category).forEach((t) => s.add(t));
+    for (const b of stocked) if (isFullSize(b.size)) tokensFor(b.category).forEach((t) => s.add(t));
     return s;
   }, [stocked]);
 

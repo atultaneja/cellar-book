@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { COCKTAILS, makeable } from "@/lib/cocktails";
 import { tokensFor } from "@/lib/categories";
 import { inStock } from "@/lib/levels";
+import { isFullSize } from "@/lib/sizes";
 import { EMPTY_PROFILE, type TasteProfile } from "@/lib/taste";
 import type { Bottle } from "@/lib/types";
 
@@ -121,7 +122,8 @@ export async function POST(request: Request) {
   const bottles = (bottleRows as Bottle[]) ?? [];
   const profile: TasteProfile = { ...EMPTY_PROFILE, ...(profileRow?.data ?? {}) };
 
-  const stocked = bottles.filter((b) => inStock(b.level));
+  // Recommend from real bar bottles only — miniatures are tasting pours.
+  const stocked = bottles.filter((b) => inStock(b.level) && isFullSize(b.size));
   const availableCats = new Set<string>();
   for (const b of stocked) tokensFor(b.category).forEach((t) => availableCats.add(t));
   const canMake = COCKTAILS.filter((c) => makeable(c, availableCats));
