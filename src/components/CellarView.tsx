@@ -34,6 +34,7 @@ export function CellarView({
   const [bottles, setBottles] = useState<Bottle[]>(initial);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string>("All");
+  const [levelFilter, setLevelFilter] = useState<string>("all");
   const [mode, setMode] = useState<"none" | "single" | "bulk" | "scan">("none");
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [bulk, setBulk] = useState("");
@@ -78,9 +79,15 @@ export function CellarView({
         (b.brand ?? "").toLowerCase().includes(q) ||
         b.category.toLowerCase().includes(q);
       const matchesC = filter === "All" || familyOf(b.category) === filter;
-      return matchesQ && matchesC;
+      const matchesLevel =
+        levelFilter === "all" ||
+        (levelFilter === "full" && b.level === 5) ||
+        (levelFilter === "half" && b.level >= 3) ||
+        (levelFilter === "low" && b.level >= 1 && b.level <= 2) ||
+        (levelFilter === "empty" && b.level === 0);
+      return matchesQ && matchesC && matchesLevel;
     });
-  }, [bottles, query, filter]);
+  }, [bottles, query, filter, levelFilter]);
 
   // Group by family (Whiskey, Gin, Wine, …), and within each family by the
   // specific category (Bourbon, Indian Single Malt, …).
@@ -316,23 +323,36 @@ export function CellarView({
         </div>
       )}
 
-      {/* Search + filter */}
-      <div className="mb-4 flex gap-2">
+      {/* Search + filters */}
+      <div className="mb-4 flex flex-wrap gap-2">
         <input
-          className="club-input"
+          className="club-input min-w-[160px] flex-1"
           placeholder="Search the cellar…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <select
-          className="club-input w-44"
+          className="club-input min-w-[130px] flex-1"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
+          aria-label="Filter by shelf"
         >
           <option>All</option>
           {FAMILIES.map((f) => (
             <option key={f}>{f}</option>
           ))}
+        </select>
+        <select
+          className="club-input min-w-[130px] flex-1"
+          value={levelFilter}
+          onChange={(e) => setLevelFilter(e.target.value)}
+          aria-label="Filter by amount remaining"
+        >
+          <option value="all">Any amount</option>
+          <option value="full">Full</option>
+          <option value="half">Half or more</option>
+          <option value="low">Running low</option>
+          <option value="empty">Empty</option>
         </select>
       </div>
 
@@ -342,6 +362,13 @@ export function CellarView({
           <p className="font-display text-lg text-racing">The cellar awaits its first entry.</p>
           <p className="mt-1 font-body text-sm text-ink-soft">
             Use <span className="font-semibold">Bulk add</span> to load your collection quickly.
+          </p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="club-card p-8 text-center">
+          <p className="font-display text-lg text-racing">Nothing matches these filters.</p>
+          <p className="mt-1 font-body text-sm text-ink-soft">
+            Try a different amount or shelf, or clear the search.
           </p>
         </div>
       ) : (
